@@ -1,0 +1,3290 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Ma Petite Pâtisserie</title>
+
+  <style>
+
+    * {
+
+      box-sizing: border-box;
+
+    }
+
+
+    .album-actions { display:flex; gap:8px; margin: 12px 0; }
+    .album-actions button { flex:1; border:1px solid #dca6be; border-radius:12px; padding:10px 8px; color:#8c5272; background:#fff7fa; cursor:pointer; font:inherit; font-size:12px; }
+    .album-actions button.primary { background:linear-gradient(135deg,#d88eaf,#b96d91); color:white; border-color:#c77d9f; }
+    #albumPanel { display:none; margin-top:10px; padding:10px; border:1px solid #efd6e1; border-radius:14px; background:rgba(255,255,255,.72); }
+    #albumPanel.open { display:block; }
+    #albumGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:260px; overflow:auto; }
+    .album-card { min-width:0; border:1px solid #efd6e1; border-radius:10px; padding:5px; background:#fffafd; }
+    .album-card img { display:block; width:100%; aspect-ratio:1; object-fit:contain; border-radius:6px; background:#fff4f8; cursor:pointer; }
+    .album-card small { display:block; font-size:10px; margin:4px 0; color:#94647e; }
+    .album-card button { width:100%; padding:5px; border:0; border-radius:7px; color:#9b5879; background:#f9e7ef; cursor:pointer; font-size:10px; }
+    #albumEmpty { font-size:12px; color:#a47b91; text-align:center; padding:12px 4px; }
+    /* アルバムを開くと、見開きのフォトブックとして表示 */
+    #albumPanel { display:none !important; }
+    #albumBookOverlay { position:fixed; inset:0; z-index:1000; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(64,39,48,.48); backdrop-filter:blur(5px); }
+    #albumBookOverlay.open { display:flex; }
+    .album-book { position:relative; width:min(920px,96vw); max-height:min(760px,90vh); overflow:hidden; border:1px solid #d5a8a0; border-radius:18px; padding:20px; background:linear-gradient(135deg,#f6e5d9,#fff9f0 48%,#f0d9ce); box-shadow:0 24px 80px rgba(57,29,39,.32), inset 0 0 0 5px rgba(255,255,255,.55); }
+    .album-book:before { content:""; position:absolute; top:0; bottom:0; left:50%; width:12px; transform:translateX(-50%); background:linear-gradient(90deg,rgba(130,76,77,.12),rgba(255,255,255,.85),rgba(130,76,77,.14)); pointer-events:none; }
+    .album-book-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px 14px; border-bottom:1px solid #dfbdb5; }
+    .album-book-title { color:#92566f; font-family:Georgia,"Yu Mincho",serif; font-size:clamp(20px,3vw,30px); font-style:italic; letter-spacing:.04em; }
+    .album-book-subtitle { color:#ad8190; font-size:11px; letter-spacing:.16em; margin-top:3px; }
+    .album-book-controls { display:flex; gap:8px; align-items:center; }
+    .album-book-controls button { border:1px solid #dfb5c4; border-radius:999px; padding:8px 12px; color:#92566f; background:#fff8f8; cursor:pointer; font:inherit; font-size:12px; }
+    .album-book-controls .close-book { width:36px; height:36px; padding:0; font-size:20px; }
+    #albumBookContent { overflow:auto; max-height:calc(min(760px,90vh) - 110px); padding:18px 5px 6px; }
+    #albumGrid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; max-height:none; overflow:visible; }
+    .album-card { position:relative; min-width:0; border:1px solid #e7cbd0; border-radius:8px; padding:8px; background:#fffdf8; box-shadow:0 3px 8px rgba(119,74,84,.10); }
+    .album-card:before { content:""; display:block; position:absolute; inset:3px; border:1px solid #f0e0dc; border-radius:5px; pointer-events:none; }
+    .album-card img { position:relative; z-index:1; display:block; width:100%; aspect-ratio:1; object-fit:contain; border-radius:4px; background:#fff6f6; cursor:pointer; }
+    .album-card small { position:relative; z-index:1; display:block; font-size:11px; margin:7px 0 5px; color:#94647e; text-align:center; }
+    .album-card button { position:relative; z-index:1; width:100%; padding:6px; border:0; border-radius:7px; color:#9b5879; background:#f9e7ef; cursor:pointer; font-size:11px; }
+    .album-card button.apply-photo-design { margin-top:5px; background:#ead8f4; color:#77518a; font-weight:600; }
+    #albumEmpty { font-size:14px; color:#a47b91; text-align:center; padding:55px 10px; background:rgba(255,255,255,.55); border:1px dashed #e1bac9; border-radius:12px; line-height:2; }
+    @media (max-width: 720px) { #settingsPanel { right:8px; width:220px; } #partsPanel { left:8px; width:250px; } #albumBookOverlay{padding:10px;} .album-book{padding:14px 10px;} #albumGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;} .album-book:before{display:none;} .album-book-header{align-items:flex-start;} .album-book-controls button{padding:7px 9px;} }
+
+    body {
+
+      margin: 0;
+
+      overflow: hidden;
+
+      font-family: "Yu Gothic", sans-serif;
+
+      color: #79566d;
+
+      background: #fff5f8;
+
+    }
+
+    header {
+
+      position: absolute;
+
+      z-index: 2;
+
+      top: 20px;
+
+      left: 24px;
+
+      pointer-events: none;
+
+    }
+
+    h1 {
+
+      margin: 0;
+
+      font-family: Georgia, serif;
+
+      font-size: 27px;
+
+    }
+
+    header p {
+
+      margin: 5px 0;
+
+      font-size: 11px;
+
+      letter-spacing: 3px;
+
+    }
+
+    #game {
+
+      position: fixed;
+
+      inset: 0;
+
+    }
+
+    #game canvas {
+
+      display: block;
+
+      width: 100%;
+
+      height: 100%;
+
+    }
+
+    .glass-panel {
+      position: absolute; z-index: 2; top: 112px; bottom: 22px;
+      width: 290px; overflow-y: auto; padding: 18px 16px 16px;
+      border: 1px solid rgba(220,166,190,.8); border-radius: 22px;
+      background: linear-gradient(145deg, rgba(255,250,252,.95), rgba(255,241,247,.88));
+      box-shadow: 0 12px 34px rgba(133,78,102,.14), inset 0 1px 0 #fff;
+      backdrop-filter: blur(12px); scrollbar-width: thin; scrollbar-color: #d79ab5 transparent;
+    }
+    #partsPanel { left: 18px; }
+    #settingsPanel { right: 18px; width: 250px; }
+    .panel-heading { padding: 0 3px 13px; margin-bottom: 15px; border-bottom: 1px solid #efd6e1; }
+    .panel-heading .eyebrow { font-size: 9px; letter-spacing: 2px; color: #b77898; font-weight: 700; }
+    .panel-heading h2 { margin: 5px 0 4px; font-family: Georgia, 'Yu Mincho', serif; font-size: 21px; font-weight: 500; color: #955b79; }
+    .panel-heading p { margin: 0; font-size: 11px; line-height: 1.6; color: #a47b91; }
+    .section {
+
+      margin-bottom: 17px;
+      padding: 12px;
+      border: 1px solid #f0dce5;
+      border-radius: 15px;
+      background: rgba(255,255,255,.48);
+
+    }
+
+    .section h2 {
+
+      margin: 0 0 10px;
+
+      font-size: 14px;
+
+      font-weight: 600;
+
+    }
+
+    .choices {
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 7px;
+
+    }
+
+    button {
+
+      padding: 9px 10px;
+
+      border: 1px solid #e5cbd9;
+
+      border-radius: 12px;
+
+      background: white;
+
+      color: #79566d;
+
+      cursor: pointer;
+
+      font: inherit;
+
+      font-size: 12px;
+
+      transition: 0.15s;
+
+    }
+
+    button:hover {
+
+      background: #f9e5ef;
+
+    }
+
+    button.active {
+
+      border-color: #b77898;
+
+      background: #f4dce8;
+
+      box-shadow: inset 0 0 0 1px #b77898;
+
+    }
+
+    #decorationChoices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #decorationChoices button { min-width:0; min-height:108px; padding:9px 5px 7px; display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap:6px; background:linear-gradient(180deg,#fff,#fff6fa); border:1px solid #ecd4df; border-radius:13px; box-shadow:0 2px 5px #d6a7bc16; }
+    #decorationChoices button.active { background:#f7dce8; border-color:#c98aaa; box-shadow:inset 0 0 0 1px #d8a5bd, 0 3px 8px #d6a7bc20; }
+    #decorationChoices .deco-name { display:flex; align-items:center; justify-content:center; min-height:28px; width:100%; font-size:11px; line-height:1.35; overflow-wrap:anywhere; }
+    #decorationChoices .model-preview { overflow:hidden; position:relative; }
+    #decorationChoices .model-preview img { display:block; width:100%; height:100%; object-fit:contain; }
+    #decorationChoices .model-preview .preview-loading { color:#c8a7af; font-size:20px; }
+    #decorationChoices .deco-preview { display:flex; align-items:center; justify-content:center; width:100%; height:55px; font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif; font-size:37px; line-height:1; filter:drop-shadow(0 2px 2px #a16a7a20); }
+    #decorationChoices .pearl-preview { gap:3px; flex-wrap:wrap; align-content:center; }
+    #decorationChoices .pearl-preview i { display:block; width:13px; height:13px; border-radius:50%; background:radial-gradient(circle at 30% 25%,#fff 0 12%,#fffdfb 25%,#e8d9e1 72%,#c8b2c1 100%); border:1px solid #e4d4df; box-shadow:0 1px 2px #9c7d8b40; }
+    @media (max-width:520px) { #decorationChoices { gap:6px; } #decorationChoices button { min-height:92px; padding:6px 3px; } #decorationChoices .deco-preview { height:45px; font-size:30px; } #decorationChoices .deco-name { font-size:10px; } }
+    .color-button {
+
+      width: 31px;
+
+      height: 31px;
+
+      padding: 0;
+
+      border-radius: 50%;
+
+    }
+
+    #reset {
+
+      width: 100%;
+
+      padding: 11px;
+
+      background: #b77898;
+
+      color: white;
+
+      border-color: #b77898;
+
+    }
+
+    #hint {
+
+      position: absolute;
+
+      z-index: 1;
+
+      bottom: 20px;
+
+      left: 50%;
+
+      transform: translateX(-50%);
+
+      padding: 10px 16px;
+
+      border-radius: 20px;
+
+      background: #fffaf2dd;
+
+      font-size: 12px;
+
+      white-space: nowrap;
+
+      pointer-events: none;
+
+    }
+
+    #status {
+
+      padding: 10px;
+
+      font-size: 12px;
+
+      line-height: 1.6;
+
+    }
+
+    @media (max-width: 800px) {
+      header { top: 12px; left: 12px; }
+      h1 { font-size: 20px; }
+      header p { font-size: 9px; }
+      .glass-panel { top: 88px; bottom: 10px; width: 215px; padding: 12px; border-radius: 17px; }
+      #partsPanel { left: 8px; }
+      #settingsPanel { right: 8px; width: 190px; }
+      .panel-heading h2 { font-size: 17px; }
+      .section { padding: 9px; }
+      button { font-size: 11px; }
+      #hint { bottom: 12px; font-size: 10px; white-space: normal; max-width: 42vw; text-align: center; }
+    }
+    @media (max-width: 520px) {
+      .glass-panel { top: auto; bottom: 8px; height: 38vh; width: calc(50vw - 12px); padding: 9px; }
+      #partsPanel { left: 8px; }
+      #settingsPanel { right: 8px; }
+      .panel-heading { padding-bottom: 7px; margin-bottom: 8px; }
+      .panel-heading p, .panel-heading .eyebrow { display: none; }
+      .panel-heading h2 { margin-top: 0; }
+      #hint { top: 72px; bottom: auto; left: 50%; max-width: 80vw; }
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <header>
+
+    <h1>Ma Petite Pâtisserie</h1>
+
+    <p>MY LITTLE CAKE STUDIO</p>
+
+  </header>
+
+  <div id="game"></div>
+
+  <aside id="partsPanel" class="glass-panel">
+    <div class="panel-heading"><span class="eyebrow">DECORATION LIBRARY</span><h2>パーツを選ぶ</h2><p>好きな飾りを選んで、ケーキに置いてみましょう。</p></div>
+<div class="section">
+
+  <div class="section" id="targetTierSection">
+    <h2>飾りを置く段</h2>
+    <p style="font-size:12px; line-height:1.6; margin:4px 0 8px;">置きたい段を選んでから、パーツを選びましょう。</p>
+    <div class="choices" id="targetTierChoices"></div>
+  </div>
+
+  <h2>デコレーション</h2>
+
+  <div class="choices" id="decorationChoices">
+    <button class="active" data-decoration="strawberry"><span class="deco-name">いちご</span><span class="deco-preview model-preview" data-preview-model="strawberry" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+    <button data-decoration="cherry"><span class="deco-name">サクランボ</span><span class="deco-preview model-preview" data-preview-model="cherry" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+    <button data-decoration="rose"><span class="deco-name">薔薇</span><span class="deco-preview" aria-hidden="true">🌹</span></button>
+    <button data-decoration="pearl"><span class="deco-name">パール</span><span class="deco-preview pearl-preview" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button>
+    <button data-decoration="heart"><span class="deco-name">ハート</span><span class="deco-preview" aria-hidden="true">💗</span></button>
+    <button data-decoration="creamSwirl"><span class="deco-name">クリーム絞り</span><span class="deco-preview model-preview" data-preview-model="creamSwirl" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+    <button data-decoration="cream2"><span class="deco-name">クリーム２</span><span class="deco-preview model-preview" data-preview-model="cream2" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+    <button data-decoration="cream3"><span class="deco-name">クリーム３</span><span class="deco-preview model-preview" data-preview-model="cream3" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+    <button data-decoration="candle"><span class="deco-name">ろうそく</span><span class="deco-preview" aria-hidden="true">🕯️</span></button>
+    <button data-decoration="sidePearl"><span class="deco-name">側面パール</span><span class="deco-preview pearl-preview" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button>
+    <button data-decoration="ribbonSide"><span class="deco-name">側面リボン</span><span class="deco-preview model-preview" data-preview-model="ribbonSide" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+    <button data-decoration="creamSide"><span class="deco-name">側面クリーム</span><span class="deco-preview model-preview" data-preview-model="creamSide" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+    <button data-decoration="racecreamSide"><span class="deco-name">側面レースクリーム</span><span class="deco-preview model-preview" data-preview-model="racecreamSide" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+    <button data-decoration="racecream2Side"><span class="deco-name">側面レースクリーム２</span><span class="deco-preview model-preview" data-preview-model="racecream2Side" aria-hidden="true"><span class="preview-loading">…</span></span></button>
+  </div>
+
+  <p style="font-size:12px; line-height:1.8;">
+
+    いちご・サクランボ・クリームなどはケーキの上をクリックして配置します。側面パーツはケーキの側面をクリックして配置できます。3Dモデルの見本を表示するには、models フォルダに berry.glb、cherry.glb、cream.glb、cream2.glb、cream3.glb、ribbon_side.glb、cream_side.glb、racecream_side.glb、racecream2_side.glb を置いてください。
+
+    置いたパーツはドラッグで移動できます。
+
+  </p>
+
+  <div style="margin:10px 0; padding:10px; border:1px solid #ead5df; border-radius:12px;">
+    <div style="font-size:12px; margin-bottom:8px;">選択した飾りの向き</div>
+    <div class="choices" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+      <button id="rotateDecorationLeft" type="button">↶ 左へ15°</button>
+      <button id="rotateDecorationReset" type="button">向きを戻す</button>
+      <button id="rotateDecorationRight" type="button">右へ15° ↷</button>
+    </div>
+    <div id="rotationLabel" style="font-size:11px; margin-top:7px;">飾りをクリックして選択してください</div>
+  </div>
+
+  <div style="margin:10px 0; padding:10px; border:1px solid #ead5df; border-radius:12px;">
+    <div style="font-size:12px; margin-bottom:8px;">選択した飾りの大きさ</div>
+    <div class="choices" style="display:grid; grid-template-columns:1fr 1fr 1fr;">
+      <button id="scaleDown" type="button">− 小さく</button>
+      <button id="scaleReset" type="button">標準</button>
+      <button id="scaleUp" type="button">＋ 大きく</button>
+    </div>
+    <div id="scaleLabel" style="font-size:11px; margin-top:7px;">飾りをクリックして選択してください</div>
+  </div>
+
+  <div style="margin:10px 0; padding:10px; border:1px solid #ead5df; border-radius:12px;">
+    <div style="font-size:12px; margin-bottom:8px;">側面の飾りの出入り調整</div>
+    <div class="choices" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+      <button id="moveDecorationBack" type="button">内側へ</button>
+      <button id="moveDecorationDepthReset" type="button">位置を戻す</button>
+      <button id="moveDecorationFront" type="button">外側へ</button>
+    </div>
+    <div id="depthLabel" style="font-size:11px; margin-top:7px;">飾りをクリックして選択してください</div>
+    <div style="font-size:10px; line-height:1.6; margin-top:5px;">少しずつ前後に動かせます。側面の飾りはケーキの側面に沿って移動します。</div>
+  </div>
+
+  <div id="decorationColorSection" style="margin:10px 0; padding:10px; border:1px solid #ead5df; border-radius:12px;">
+    <div style="font-size:12px; margin-bottom:8px;">選択した飾りの色</div>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <input id="decorationColorPicker" type="color" value="#f3a9c7" aria-label="飾りの色" style="width:48px; height:38px; padding:2px; border:1px solid #e5cbd9; border-radius:9px; background:white; cursor:pointer;">
+      <span style="font-size:11px; line-height:1.5;">飾りをクリックして選び、色を選んでから適用します。</span>
+    </div>
+    <div class="choices" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+      <button id="applyDecorationColor" type="button">色を適用</button>
+      <button id="resetDecorationColor" type="button">元の色に戻す</button>
+    </div>
+    <div id="decorationColorLabel" style="font-size:11px; margin-top:7px;">飾りをクリックして選択してください</div>
+  </div>
+
+  <button id="deleteDecoration" style="width:100%;">
+
+    選択した飾りを削除
+
+  </button>
+
+  <button id="clearDecorations" style="width:100%; margin-top:6px;">
+
+    飾りをすべて消す
+
+  </button>
+
+</div>
+
+  </aside>
+
+  <aside id="settingsPanel" class="glass-panel">
+    <div class="panel-heading"><span class="eyebrow">CAKE STUDIO</span><h2>ケーキの設定</h2><p>形や色を自由にカスタマイズ。</p></div>
+    <div class="section">
+
+      <h2>ケーキのデザイン</h2>
+
+      <div class="choices" id="shapeChoices">
+
+        <button class="active" data-shape="round">まる型</button>
+
+        <button data-shape="heart">ハート型</button>
+
+      </div>
+
+    </div>
+
+    <div class="section">
+
+      <h2>段数</h2>
+
+      <div class="choices" id="tierChoices">
+
+        <button class="active" data-tiers="1">1段</button>
+
+        <button data-tiers="2">2段</button>
+
+        <button data-tiers="3">3段</button>
+
+      </div>
+
+    </div>
+
+    <div class="section">
+
+      <h2>スポンジ</h2>
+
+      <div class="choices" id="spongeChoices">
+
+        <button class="active" data-color="#e8bb88">プレーン</button>
+
+        <button data-color="#654535">チョコ</button>
+
+        <button data-color="#efb1bd">いちご</button>
+
+      </div>
+
+    </div>
+
+    <div class="section">
+
+      <h2>クリームの色</h2>
+
+      <div class="choices" id="creamChoices">
+
+        <button class="color-button active"
+
+          data-color="#fff3f5"
+
+          style="background:#fff3f5"
+
+          aria-label="ホワイト"></button>
+
+        <button class="color-button"
+
+          data-color="#f3a9c7"
+
+          style="background:#f3a9c7"
+
+          aria-label="ピンク"></button>
+
+        <button class="color-button"
+
+          data-color="#b9b9f1"
+
+          style="background:#b9b9f1"
+
+          aria-label="ラベンダー"></button>
+
+        <button class="color-button"
+
+          data-color="#a9dce7"
+
+          style="background:#a9dce7"
+
+          aria-label="水色"></button>
+
+        <button class="color-button"
+
+          data-color="#c7dfb5"
+
+          style="background:#c7dfb5"
+
+          aria-label="ミント"></button>
+
+        <button class="color-button"
+
+          data-color="#f3d9a6"
+
+          style="background:#f3d9a6"
+
+          aria-label="クリームイエロー"></button>
+
+      </div>
+
+    </div>
+
+    <div class="section" id="creamCoverageSection">
+      <h2>クリームの仕上げ</h2>
+      <div class="choices" style="display:grid;grid-template-columns:1fr 1fr;">
+        <button type="button" id="creamCoverageTop" class="active">上部だけ</button>
+        <button type="button" id="creamCoverageFull">全体を覆う</button>
+      </div>
+      <p style="font-size:12px;line-height:1.7;margin:6px 0 0;">「全体を覆う」を選ぶと、スポンジの側面もクリームでコーティングします。</p>
+    </div>
+
+    <div class="section">
+
+      <h2>お皿のデザイン</h2>
+
+      <div class="choices" id="plateChoices">
+
+        <button class="active" data-plate="#fffdfc">陶器</button>
+
+        <button data-plate="#d9edf0">ガラス風</button>
+
+        <button data-plate="#d9c49c">アンティーク</button>
+
+      </div>
+
+    </div>
+
+<div class="section">
+  <h2>ケーキの向き</h2>
+  <button id="rotateMode" style="width:100%;">回転モード：OFF</button>
+  <p style="font-size:12px; line-height:1.8;">回転モードをONにして、ケーキやお皿の上を左右にドラッグすると、ケーキ台ごと回転します。飾り付けに戻るときはOFFにしてください。</p>
+</div>
+
+
+    <div class="section">
+      <h2>ケーキアルバム</h2>
+      <p style="font-size:12px;line-height:1.7;margin:0 0 8px;">お気に入りのケーキを写真に残しましょう。</p>
+      <div class="album-actions">
+        <button id="takeCakePhoto" class="primary" type="button">📷 写真を撮る</button>
+        <button id="toggleAlbum" type="button">♡ アルバム</button>
+      </div>
+    </div>
+
+    <div id="status">お好みのケーキを作りましょう。</div>
+
+    <button id="reset">最初の状態に戻す</button>
+
+  </aside>
+
+  </aside>
+  <div id="hint">ドラッグ：回転　／　スクロール：拡大・縮小</div>
+
+  <div id="albumBookOverlay" aria-hidden="true">
+    <section class="album-book" role="dialog" aria-modal="true" aria-labelledby="albumBookTitle">
+      <div class="album-book-header">
+        <div>
+          <div id="albumBookTitle" class="album-book-title">My Cake Album</div>
+          <div class="album-book-subtitle">A COLLECTION OF LITTLE CAKE MEMORIES</div>
+        </div>
+        <div class="album-book-controls">
+          <button id="clearAlbum" type="button">写真をすべて削除</button>
+          <button id="closeAlbumBook" class="close-book" type="button" aria-label="アルバムを閉じる">×</button>
+        </div>
+      </div>
+      <div id="albumBookContent">
+        <div id="albumEmpty">まだ写真がありません。<br>お気に入りのケーキを撮影して、最初の1枚を飾りましょう。</div>
+        <div id="albumGrid"></div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+
+    import * as THREE from
+
+      'https://esm.sh/three@0.170.0';
+
+    import { OrbitControls } from
+
+      'https://esm.sh/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+
+    import { GLTFLoader } from
+
+      'https://esm.sh/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
+
+    // --------------------------------
+
+    // 基本設定
+
+    // --------------------------------
+
+    const container = document.getElementById('game');
+
+    const scene = new THREE.Scene();
+
+    scene.background = new THREE.Color('#c9c5b9'); // 落ち着いたグレージュの店内背景
+
+    const camera = new THREE.PerspectiveCamera(
+
+      40,
+
+      window.innerWidth / window.innerHeight,
+
+      0.1,
+
+      100
+
+    );
+
+    camera.position.set(4.5, 3.8, 6.5);
+
+    const renderer = new THREE.WebGLRenderer({
+
+      antialias: true,
+      preserveDrawingBuffer: true
+
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+    renderer.toneMappingExposure = 1.15;
+
+    renderer.shadowMap.enabled = true;
+
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(
+
+      camera,
+
+      renderer.domElement
+
+    );
+
+    controls.enableDamping = true;
+
+    controls.target.set(0, 0.9, 0);
+
+    controls.minDistance = 3.5;
+
+    controls.maxDistance = 8.5;
+
+    controls.maxPolarAngle = Math.PI * 0.47;
+
+    scene.add(
+
+      new THREE.HemisphereLight(0xffffff, 0xe5c4d3, 2.1)
+
+    );
+
+    const light = new THREE.DirectionalLight(0xffffff, 3);
+
+    light.position.set(4, 7, 5);
+
+    scene.add(light);
+
+    const fillLight = new THREE.PointLight(0xffd6e7, 25);
+
+    fillLight.position.set(-3, 3, -2);
+
+    scene.add(fillLight);
+
+    // 床
+
+    const floor = new THREE.Mesh(
+
+      new THREE.PlaneGeometry(200, 200),
+
+      new THREE.MeshStandardMaterial({
+
+        color: '#c9c5b9',
+
+        roughness: 0.9
+
+      })
+
+    );
+
+    floor.rotation.x = -Math.PI / 2;
+
+    floor.position.y = -0.04;
+
+    scene.add(floor);
+
+    // --------------------------------
+
+    // パティスリー風の背景
+
+    // --------------------------------
+
+    const shop = new THREE.Group();
+
+    scene.add(shop);
+
+    function shopBox(w, h, d, color, x, y, z, opts = {}) {
+
+      const mesh = new THREE.Mesh(
+
+        new THREE.BoxGeometry(w, h, d),
+
+        new THREE.MeshStandardMaterial({
+
+          color,
+
+          roughness: opts.roughness ?? 0.72,
+
+          metalness: opts.metalness ?? 0
+
+        })
+
+      );
+
+      mesh.position.set(x, y, z);
+
+      if (opts.rotationY) mesh.rotation.y = opts.rotationY;
+
+      if (opts.castShadow !== false) mesh.castShadow = true;
+
+      mesh.receiveShadow = true;
+
+      shop.add(mesh);
+
+      return mesh;
+
+    }
+
+    function shopCylinder(rt, rb, h, color, x, y, z, segments = 32) {
+
+      const mesh = new THREE.Mesh(
+
+        new THREE.CylinderGeometry(rt, rb, h, segments),
+
+        new THREE.MeshStandardMaterial({ color, roughness: 0.42 })
+
+      );
+
+      mesh.position.set(x, y, z);
+
+      mesh.castShadow = true;
+
+      shop.add(mesh);
+
+      return mesh;
+
+    }
+
+    // クリーム色の壁と腰板
+
+    shopBox(18, 9, 0.22, '#d9d2c5', 0, 4.4, -4.25, { castShadow: false });
+
+    shopBox(18, 1.35, 0.16, '#aeb8a8', 0, 0.68, -4.10, { castShadow: false });
+
+    shopBox(18, 0.10, 0.22, '#8f9a87', 0, 1.38, -4.00, { castShadow: false });
+
+    shopBox(18, 0.07, 0.22, '#8f9a87', 0, 0.12, -4.00, { castShadow: false });
+
+    // 壁の細いモールディング
+
+    for (const x of [-5.5, -3.7, 3.7, 5.5]) {
+
+      shopBox(0.045, 2.15, 0.035, '#b8aa94', x, 2.45, -4.105, { castShadow: false });
+
+    }
+
+    // 左側の飾り棚
+
+    shopBox(2.35, 0.13, 0.52, '#b78368', -3.55, 2.45, -3.72);
+
+    shopBox(2.35, 0.13, 0.52, '#b78368', -3.55, 3.45, -3.72);
+
+    shopBox(2.35, 0.13, 0.52, '#b78368', -3.55, 4.45, -3.72);
+
+    for (const x of [-4.55, -2.55]) {
+
+      shopBox(0.08, 2.15, 0.10, '#d6b08d', x, 3.45, -3.75);
+
+    }
+
+    // 棚に並ぶ瓶や焼き菓子の小物
+
+    const jarColors = ['#f4d6d0', '#d6e6d9', '#f2dfb1', '#e6d9ee', '#fff0d7'];
+
+    for (let i = 0; i < 5; i++) {
+
+      const x = -4.35 + i * 0.40;
+
+      const y = 2.45;
+
+      shopCylinder(0.105, 0.12, 0.28, jarColors[i], x, y + 0.22, -3.63, 24);
+
+      shopCylinder(0.08, 0.08, 0.055, '#d2b08a', x, y + 0.39, -3.63, 24);
+
+      shopCylinder(0.105, 0.105, 0.045, '#fff7ed', x, 3.45 + 0.10, -3.62, 24);
+
+      shopCylinder(0.09, 0.09, 0.16, ['#e8b9a8','#f4dca8','#c6d9c5'][i % 3], x, 3.45 + 0.20, -3.62, 24);
+
+      shopCylinder(0.11, 0.11, 0.04, '#fff7ed', x, 4.45 + 0.10, -3.62, 24);
+
+      shopCylinder(0.085, 0.085, 0.13, ['#e5a8b5','#c9c5e8','#e6c18b'][i % 3], x, 4.45 + 0.19, -3.62, 24);
+
+    }
+
+    // 中央のロゴ看板（文字はCanvasTextureで描画）
+
+    const signCanvas = document.createElement('canvas');
+
+    signCanvas.width = 1024;
+
+    signCanvas.height = 360;
+
+    const signCtx = signCanvas.getContext('2d');
+
+    signCtx.fillStyle = '#fffaf2';
+
+    signCtx.fillRect(0, 0, 1024, 360);
+
+    signCtx.strokeStyle = '#c59a79';
+
+    signCtx.lineWidth = 9;
+
+    signCtx.strokeRect(18, 18, 988, 324);
+
+    signCtx.strokeStyle = '#e5c9b6';
+
+    signCtx.lineWidth = 3;
+
+    signCtx.strokeRect(34, 34, 956, 292);
+
+    signCtx.textAlign = 'center';
+
+    signCtx.fillStyle = '#9c6d68';
+
+    signCtx.font = 'italic 76px Georgia, serif';
+
+    signCtx.fillText('Ma Petite', 512, 145);
+
+    signCtx.font = 'italic 92px Georgia, serif';
+
+    signCtx.fillText('Pâtisserie', 512, 245);
+
+    const signTexture = new THREE.CanvasTexture(signCanvas);
+
+    signTexture.colorSpace = THREE.SRGBColorSpace;
+
+    shopBox(3.45, 1.35, 0.14, '#c49b7a', 0.15, 4.15, -4.00, { castShadow: false });
+
+    const sign = new THREE.Mesh(
+
+      new THREE.PlaneGeometry(3.30, 1.20),
+
+      new THREE.MeshBasicMaterial({ map: signTexture })
+
+    );
+
+    sign.position.set(0.15, 4.15, -3.915);
+
+    shop.add(sign);
+
+    // 右側の大きな窓と淡いブルーのガラス
+
+    shopBox(2.35, 3.25, 0.10, '#d9e7e6', 4.05, 3.0, -4.02, { castShadow: false });
+
+    for (const x of [2.84, 4.05, 5.26]) {
+
+      shopBox(0.075, 3.35, 0.13, '#fff8ed', x, 3.0, -3.91, { castShadow: false });
+
+    }
+
+    for (const y of [1.36, 3.0, 4.64]) {
+
+      shopBox(2.55, 0.075, 0.13, '#fff8ed', 4.05, y, -3.91, { castShadow: false });
+
+    }
+
+    // 窓の外に見える、ぼんやりした街並みと植木
+
+    shopBox(2.15, 0.75, 0.035, '#d3c8b6', 4.05, 2.0, -3.82, { castShadow: false });
+
+    for (let i = 0; i < 5; i++) {
+
+      const x = 3.15 + i * 0.42;
+
+      shopBox(0.26, 0.45 + (i % 3) * 0.17, 0.035, ['#d5dfd1','#e8d4cf','#c8d8d6'][i % 3], x, 1.88 + (i % 3) * 0.08, -3.79, { castShadow: false });
+
+    }
+
+    // 小さなケーキスタンドを左右に飾る
+
+    function miniCakeStand(x, z, baseColor, icingColor) {
+
+      shopCylinder(0.30, 0.34, 0.07, baseColor, x, 1.62, z, 40);
+
+      shopCylinder(0.075, 0.09, 0.34, baseColor, x, 1.42, z, 24);
+
+      shopCylinder(0.32, 0.32, 0.055, baseColor, x, 1.23, z, 40);
+
+      shopCylinder(0.22, 0.24, 0.28, '#e8bd9d', x, 1.82, z, 40);
+
+      shopCylinder(0.235, 0.235, 0.07, icingColor, x, 1.99, z, 40);
+
+      for (let i = 0; i < 5; i++) {
+
+        const a = i * Math.PI * 2 / 5;
+
+        shopCylinder(0.035, 0.045, 0.08, '#fff3e9', x + Math.cos(a) * 0.13, 2.06, z + Math.sin(a) * 0.13, 16);
+
+      }
+
+    }
+
+    miniCakeStand(-3.4, -2.9, '#ead4bd', '#f2b9ca');
+
+    miniCakeStand(3.1, -2.7, '#ead4bd', '#d8c8ef');
+
+    // 真鍮色のペンダントライト
+
+    for (const x of [-2.0, 2.0]) {
+
+      const cord = new THREE.Mesh(
+
+        new THREE.CylinderGeometry(0.012, 0.012, 0.72, 12),
+
+        new THREE.MeshStandardMaterial({ color: '#b58b58', metalness: 0.55, roughness: 0.35 })
+
+      );
+
+      cord.position.set(x, 5.25, -2.2);
+
+      shop.add(cord);
+
+      const shade = new THREE.Mesh(
+
+        new THREE.ConeGeometry(0.34, 0.24, 32, 1, true),
+
+        new THREE.MeshStandardMaterial({ color: '#d9b98f', metalness: 0.35, roughness: 0.4, side: THREE.DoubleSide })
+
+      );
+
+      shade.position.set(x, 4.78, -2.2);
+
+      shade.rotation.x = Math.PI;
+
+      shop.add(shade);
+
+      const bulb = new THREE.PointLight(0xffdfb3, 4, 5);
+
+      bulb.position.set(x, 4.62, -2.2);
+
+      shop.add(bulb);
+
+    }
+
+    // --------------------------------
+    // 360度見回してもお店の中に見える、奥行きのある店内
+    // --------------------------------
+    // 背景を一枚の板に見せないため、左右の壁・奥の壁・前方の壁を作る。
+    // 前方は大きなショーウィンドウと入口にして、カメラを回しても店内の続きが見える。
+    const roomMat = (color, roughness = 0.88) =>
+      new THREE.MeshStandardMaterial({ color, roughness, side: THREE.DoubleSide });
+
+    function roomPanel(w, h, d, color, x, y, z, ry = 0) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), roomMat(color));
+      m.position.set(x, y, z);
+      m.rotation.y = ry;
+      m.receiveShadow = true;
+      shop.add(m);
+      return m;
+    }
+
+    // 壁の上部を高く・遠くに設け、カメラの旋回時にも店内が途切れにくい構成にする。
+    roomPanel(24, 10, 0.24, '#d9d2c5', 0, 4.75, -10.2);
+    roomPanel(24, 1.35, 0.20, '#aeb8a8', 0, 0.70, -10.03);
+    roomPanel(0.24, 10, 24, '#d9d2c5', -10.2, 4.75, 0);
+    roomPanel(0.24, 10, 24, '#d9d2c5', 10.2, 4.75, 0);
+    roomPanel(24, 10, 0.24, '#d9d2c5', 0, 4.75, 10.2);
+
+    // それぞれの壁に腰板とモールディングを付け、箱っぽさをやわらげる。
+    for (const x of [-8.5, -5.8, -3.1, 0, 3.1, 5.8, 8.5]) {
+      roomPanel(0.045, 2.4, 0.035, '#b8aa94', x, 2.35, -10.035);
+      roomPanel(0.045, 2.4, 0.035, '#b8aa94', x, 2.35, 10.035);
+    }
+    roomPanel(0.08, 1.35, 20, '#aeb8a8', -10.03, 0.72, 0);
+    roomPanel(0.08, 1.35, 20, '#aeb8a8', 10.03, 0.72, 0);
+
+    // 左右の壁に窓枠。ガラスは半透明にしすぎず、明るい色面で奥行きを表現する。
+    for (const side of [-1, 1]) {
+      const wx = side * 10.035;
+      for (const z of [-6.2, -1.8, 2.6, 7.0]) {
+        roomPanel(0.07, 3.25, 2.25, '#d5e4e3', wx, 3.35, z);
+        for (const yy of [1.78, 3.35, 4.92]) {
+          roomPanel(0.12, 0.075, 2.35, '#fff8ed', side * 9.96, yy, z);
+        }
+        for (const zz of [z - 1.12, z, z + 1.12]) {
+          roomPanel(0.12, 3.35, 0.075, '#fff8ed', side * 9.96, 3.35, zz);
+        }
+        // 窓辺の小さな鉢植え
+        const pot = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.18, 0.14, 0.30, 20),
+          roomMat('#d8b29d')
+        );
+        pot.position.set(side * 9.45, 1.25, z + 0.45);
+        shop.add(pot);
+        for (let k = 0; k < 5; k++) {
+          const leaf = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 12, 10),
+            roomMat(k % 2 ? '#b7c8aa' : '#c7d4b7')
+          );
+          leaf.scale.set(0.75, 1.4, 0.65);
+          leaf.position.set(side * 9.45 + Math.cos(k * 1.26) * 0.16, 1.48 + (k % 2) * 0.08, z + 0.45 + Math.sin(k * 1.26) * 0.16);
+          shop.add(leaf);
+        }
+      }
+    }
+
+    // 反対側から見たとき用の棚と焼き菓子。棚板を壁沿いに並べる。
+    for (const side of [-1, 1]) {
+      const shelfX = side * 9.55;
+      for (const z of [-7.6, -3.3, 1.0, 5.3]) {
+        roomPanel(0.55, 0.12, 2.65, '#b78368', shelfX, 2.15, z);
+        roomPanel(0.55, 0.12, 2.65, '#b78368', shelfX, 3.15, z);
+        for (let j = 0; j < 4; j++) {
+          const treat = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.16, 0.18, 0.22, 20),
+            roomMat(['#f1c5c8', '#f0dfb8', '#d8c7eb', '#e8bda0'][j])
+          );
+          treat.position.set(side * 9.25, 2.32, z - 0.85 + j * 0.55);
+          shop.add(treat);
+          const top = new THREE.Mesh(
+            new THREE.SphereGeometry(0.16, 16, 10),
+            roomMat(['#fff1eb', '#f6e9d7', '#f6e9f3', '#fff0e0'][j])
+          );
+          top.scale.y = 0.45;
+          top.position.set(side * 9.25, 2.47, z - 0.85 + j * 0.55);
+          shop.add(top);
+        }
+      }
+    }
+
+    // 正面側は入口とショーケース。壁の中央を開けて、ケーキを囲む店内らしい景色にする。
+    roomPanel(7.2, 10, 0.24, '#fff4ec', -8.4, 4.75, 10.2);
+    roomPanel(7.2, 10, 0.24, '#fff4ec', 8.4, 4.75, 10.2);
+    roomPanel(9.6, 2.0, 0.24, '#fff4ec', 0, 8.75, 10.2);
+    // 入口のガラス扉と金色の枠
+    roomPanel(0.07, 6.0, 0.08, '#c8a27f', -1.65, 3.0, 10.02);
+    roomPanel(0.07, 6.0, 0.08, '#c8a27f', 1.65, 3.0, 10.02);
+    roomPanel(3.35, 0.07, 0.08, '#c8a27f', 0, 6.0, 10.02);
+    roomPanel(3.35, 0.07, 0.08, '#c8a27f', 0, 0.18, 10.02);
+    // 壁沿いの小さなガラスショーケース
+    for (const side of [-1, 1]) {
+      const cx = side * 6.9;
+      roomPanel(2.3, 0.12, 1.15, '#ead4bd', cx, 1.15, 8.9);
+      roomPanel(2.15, 0.95, 0.06, '#f8e7df', cx, 1.68, 8.35);
+      roomPanel(2.15, 0.95, 0.06, '#f8e7df', cx, 1.68, 9.45);
+      for (let j = 0; j < 3; j++) {
+        const pastry = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.22, 0.25, 0.23, 24),
+          roomMat(['#eab7c4', '#f2dfbd', '#d7c7e8'][j])
+        );
+        pastry.position.set(cx - 0.55 + j * 0.55, 1.38, 8.9);
+        shop.add(pastry);
+      }
+    }
+
+    // 天井の縁に柔らかな装飾梁と、回り込んだ照明を追加
+    for (const x of [-8, -4, 0, 4, 8]) {
+      roomPanel(0.12, 0.16, 20, '#e4c7b5', x, 9.55, 0);
+    }
+    for (const z of [-8, -4, 0, 4, 8]) {
+      roomPanel(20, 0.16, 0.12, '#e4c7b5', 0, 9.55, z);
+    }
+    for (const [x, z] of [[-6, 0], [6, 0], [0, 6]]) {
+      const lamp = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 20, 16),
+        new THREE.MeshStandardMaterial({ color: '#fff1cb', emissive: '#f8dca2', emissiveIntensity: 0.45 })
+      );
+      lamp.position.set(x, 8.9, z);
+      shop.add(lamp);
+      const glow = new THREE.PointLight(0xffdfb3, 2.2, 5);
+      glow.position.copy(lamp.position);
+      shop.add(glow);
+    }
+
+    // ケーキを置く大理石風の作業台
+
+    shopBox(8.5, 0.22, 5.2, '#b9aa98', 0, -0.18, 0, { castShadow: false });
+
+    shopBox(8.3, 0.06, 5.0, '#d5cbbb', 0, -0.04, 0, { castShadow: false });
+
+    // ケーキ全体
+
+    const cake = new THREE.Group();
+
+    scene.add(cake);
+
+    // パーツごとのグループ
+
+    const spongeGroup = new THREE.Group();
+
+    const creamGroup = new THREE.Group();
+
+    const decorationGroup = new THREE.Group();
+
+    const plateGroup = new THREE.Group();
+
+    cake.add(spongeGroup);
+
+    cake.add(creamGroup);
+
+    cake.add(decorationGroup);
+
+    cake.add(plateGroup);
+
+    // --------------------------------
+
+    // マテリアルと形状の関数
+
+    // --------------------------------
+
+    function material(color, roughness = 0.55, metalness = 0) {
+
+      return new THREE.MeshStandardMaterial({
+
+        color,
+
+        roughness,
+
+        metalness
+
+      });
+
+    }
+
+    function cylinder(
+
+      group,
+
+      radiusTop,
+
+      radiusBottom,
+
+      height,
+
+      y,
+
+      color,
+
+      segments = 96
+
+    ) {
+
+      const mesh = new THREE.Mesh(
+
+        new THREE.CylinderGeometry(
+
+          radiusTop,
+
+          radiusBottom,
+
+          height,
+
+          segments
+
+        ),
+
+        material(color)
+
+      );
+
+      mesh.position.y = y;
+
+      mesh.castShadow = true;
+
+      mesh.receiveShadow = true;
+
+      group.add(mesh);
+
+      return mesh;
+
+    }
+
+    function sphere(group, x, y, z, radius, color, scaleY = 1) {
+
+      const mesh = new THREE.Mesh(
+
+        new THREE.SphereGeometry(radius, 24, 18),
+
+        material(color)
+
+      );
+
+      mesh.position.set(x, y, z);
+
+      mesh.scale.y = scaleY;
+
+      mesh.castShadow = true;
+
+      group.add(mesh);
+
+      return mesh;
+
+    }
+
+    // --------------------------------
+
+    // --------------------------------
+
+    // ケーキの形・段数・スポンジ・クリーム
+
+    // --------------------------------
+
+    let spongeColor = '#e8bb88';
+
+    let creamColor = '#fff3f5';
+    // false: 上部中心のクリーム、true: 各段の側面全体もクリームで覆う
+    let fullCreamCoverage = false;
+
+    let cakeShape = 'round';
+
+    let tierCount = 1;
+    // 飾りを配置する段（0=一番下、段数-1=一番上）
+    let selectedTierIndex = 0;
+
+    const TIER_HEIGHT = 0.48;
+
+    const CAKE_BASE_Y = 0.23;
+
+    // クリームの最上面。飾りの配置面と飾りの高さの基準をここに統一する。
+
+    function cakeTopY() {
+
+      return CAKE_BASE_Y + tierCount * TIER_HEIGHT + 0.065;
+
+    }
+
+    function tierRadius(index) {
+
+      return 1.08 * Math.pow(0.70, index);
+
+    }
+
+    function heartShape() {
+
+      const shape = new THREE.Shape();
+
+      shape.moveTo(0, -0.48);
+
+      shape.bezierCurveTo(-0.16, -0.30, -0.52, -0.05, -0.50, 0.25);
+
+      shape.bezierCurveTo(-0.49, 0.55, -0.13, 0.59, 0, 0.36);
+
+      shape.bezierCurveTo(0.13, 0.59, 0.49, 0.55, 0.50, 0.25);
+
+      shape.bezierCurveTo(0.52, -0.05, 0.16, -0.30, 0, -0.48);
+
+      return shape;
+
+    }
+
+    function makeTier(group, radius, height, centerY, color) {
+
+      let geometry;
+
+      if (cakeShape === 'heart') {
+
+        geometry = new THREE.ExtrudeGeometry(heartShape(), {
+
+          depth: height,
+
+          bevelEnabled: false,
+
+          curveSegments: 24
+
+        });
+
+        geometry.scale(radius * 2, radius * 2, 1);
+
+        geometry.rotateX(-Math.PI / 2);
+
+        geometry.translate(0, centerY - height / 2, 0);
+
+      } else {
+
+        geometry = new THREE.CylinderGeometry(radius, radius, height, 96);
+
+        geometry.translate(0, centerY, 0);
+
+      }
+
+      const mesh = new THREE.Mesh(geometry, material(color));
+
+      mesh.castShadow = true;
+
+      mesh.receiveShadow = true;
+
+      group.add(mesh);
+
+      return mesh;
+
+    }
+
+    function buildSponge() {
+
+      spongeGroup.clear();
+
+      for (let i = 0; i < tierCount; i++) {
+
+        const radius = tierRadius(i);
+
+        const bottom = CAKE_BASE_Y + i * TIER_HEIGHT;
+
+        const centerY = bottom + TIER_HEIGHT / 2;
+
+        makeTier(spongeGroup, radius, TIER_HEIGHT, centerY, spongeColor);
+
+        if (i < tierCount - 1) {
+
+          makeTier(
+
+            spongeGroup,
+
+            radius * 1.005,
+
+            0.055,
+
+            bottom + TIER_HEIGHT - 0.02,
+
+            '#fff1ed'
+
+          );
+
+        }
+
+      }
+
+    }
+
+    function buildCream() {
+
+      creamGroup.clear();
+
+      for (let i = 0; i < tierCount; i++) {
+
+        const radius = tierRadius(i);
+
+        const bottom = CAKE_BASE_Y + i * TIER_HEIGHT;
+
+        const topY = bottom + TIER_HEIGHT;
+
+        makeTier(
+
+          creamGroup,
+
+          radius * (fullCreamCoverage ? 1.035 : 1.025),
+
+          fullCreamCoverage ? TIER_HEIGHT + 0.015 : 0.27,
+
+          fullCreamCoverage ? bottom + TIER_HEIGHT / 2 : bottom + 0.29,
+
+          creamColor
+
+        );
+
+        makeTier(
+
+          creamGroup,
+
+          radius * 1.035,
+
+          0.10,
+
+          topY + 0.015,
+
+          creamColor
+
+        );
+
+        if (cakeShape === 'round') {
+
+          const pearlRadius = 0.075 * Math.pow(0.78, i);
+
+          for (let j = 0; j < 16; j++) {
+
+            const angle = j / 16 * Math.PI * 2;
+
+            sphere(
+
+              creamGroup,
+
+              Math.cos(angle) * radius * 0.94,
+
+              topY + 0.065,
+
+              Math.sin(angle) * radius * 0.94,
+
+              pearlRadius,
+
+              creamColor,
+
+              0.85
+
+            );
+
+          }
+
+        }
+
+      }
+
+    }
+
+    // お皿
+
+    // --------------------------------
+
+    let plateColor = '#fffdfc';
+
+    function buildPlate() {
+
+      plateGroup.clear();
+
+      cylinder(
+
+        plateGroup, 1.45, 1.45, 0.10,
+
+        0.10, plateColor
+
+      );
+
+      cylinder(
+
+        plateGroup, 1.53, 1.45, 0.055,
+
+        0.17, plateColor
+
+      );
+
+      cylinder(
+
+        plateGroup, 0.42, 0.42, 0.10,
+
+        0.015, plateColor
+
+      );
+
+      // 金属風の縁取り
+
+      const rim = new THREE.Mesh(
+
+        new THREE.TorusGeometry(1.49, 0.018, 8, 100),
+
+        material('#d8bd92', 0.3, 0.35)
+
+      );
+
+      rim.rotation.x = Math.PI / 2;
+
+      rim.position.y = 0.205;
+
+      plateGroup.add(rim);
+
+    }
+
+    // --------------------------------
+
+    // デコレーション
+
+    // --------------------------------
+
+let decoration = 'strawberry';
+
+        cakeShape = 'round';
+
+        tierCount = 1;
+
+let selectedItem = null;
+
+const placedDecorations = [];
+
+// 自作クリームモデル（cake-game/models/cream.glb）を読み込む
+const gltfLoader = new GLTFLoader();
+let customCreamModel = null;
+const decorationModels = { strawberry: null, cherry: null, cream2: null, cream3: null, ribbonSide: null, creamSide: null, racecreamSide: null, racecream2Side: null };
+for (const [type, file] of Object.entries({ strawberry: 'berry.glb', cherry: 'cherry.glb', cream2: 'cream2.glb', cream3: 'cream3.glb', ribbonSide: 'ribbon_side.glb', creamSide: 'cream_side.glb', racecreamSide: 'racecream_side.glb', racecream2Side: 'racecream2_side.glb' })) {
+  gltfLoader.load(`./models/${file}`, (gltf) => {
+    decorationModels[type] = gltf.scene;
+    queueDecorationPreviews();
+    console.log(`モデルを読み込みました: models/${file}`);
+  }, undefined, (error) => {
+    console.warn(`models/${file} を読み込めませんでした。`, error);
+  });
+}
+
+// メニュー用：実際のGLBモデルを小さなプレビュー画像として描画する
+const previewElements = [...document.querySelectorAll('[data-preview-model]')];
+let previewRenderer = null;
+let previewScene = null;
+let previewCamera = null;
+let previewRenderQueued = false;
+function ensurePreviewRenderer() {
+  if (previewRenderer) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 180; canvas.height = 130;
+  previewRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+  previewRenderer.setPixelRatio(1);
+  previewRenderer.setSize(180, 130, false);
+  previewRenderer.outputColorSpace = THREE.SRGBColorSpace;
+  previewRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  previewRenderer.toneMappingExposure = 1.2;
+  previewScene = new THREE.Scene();
+  previewScene.background = null;
+  previewScene.add(new THREE.HemisphereLight(0xffffff, 0xe8c9d2, 2.1));
+  const keyLight = new THREE.DirectionalLight(0xffffff, 2.2); keyLight.position.set(3, 5, 4); previewScene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0xffd9e5, 1.0); fillLight.position.set(-4, 2, -3); previewScene.add(fillLight);
+  previewCamera = new THREE.PerspectiveCamera(32, 180 / 130, 0.01, 100);
+}
+function renderDecorationPreviews() {
+  previewRenderQueued = false;
+  const available = previewElements.filter(el => decorationModels[el.dataset.previewModel]);
+  if (!available.length) return;
+  ensurePreviewRenderer();
+  for (const el of available) {
+    const type = el.dataset.previewModel;
+    const model = decorationModels[type].clone(true);
+    model.updateMatrixWorld(true);
+    let bounds = new THREE.Box3().setFromObject(model);
+    const size = new THREE.Vector3(); bounds.getSize(size);
+    const center = new THREE.Vector3(); bounds.getCenter(center);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    model.position.sub(center);
+    // サムネイルごとに収まりを統一し、少し斜め上から見せる
+    model.scale.setScalar(1 / maxDim);
+    model.rotation.y = -0.45;
+    previewScene.add(model);
+    previewCamera.position.set(2.4, 1.8, 3.2);
+    previewCamera.lookAt(0, 0, 0);
+    previewCamera.near = 0.01; previewCamera.far = 50; previewCamera.updateProjectionMatrix();
+    previewRenderer.render(previewScene, previewCamera);
+    const img = document.createElement('img');
+    img.alt = `${el.parentElement.querySelector('.deco-name')?.textContent || 'デコレーション'}の3Dモデル見本`;
+    img.src = previewRenderer.domElement.toDataURL('image/png');
+    el.replaceChildren(img);
+    previewScene.remove(model);
+    model.traverse(obj => { if (obj.isMesh) { obj.geometry?.dispose?.(); } });
+  }
+}
+function queueDecorationPreviews() {
+  if (previewRenderQueued) return;
+  previewRenderQueued = true;
+  requestAnimationFrame(renderDecorationPreviews);
+}
+
+gltfLoader.load(
+  './models/cream.glb',
+  (gltf) => {
+    customCreamModel = gltf.scene;
+    customCreamModel.updateMatrixWorld(true);
+    decorationModels.creamSwirl = customCreamModel;
+    queueDecorationPreviews();
+    const bounds = new THREE.Box3().setFromObject(customCreamModel);
+    const size = new THREE.Vector3();
+    bounds.getSize(size);
+    console.log('自作クリームを読み込みました:', size);
+    document.getElementById('status').textContent =
+      '自作クリームを読み込みました。「クリーム絞り」を選んで配置できます。';
+  },
+  undefined,
+  (error) => {
+    console.warn('models/cream.glb を読み込めませんでした。内蔵クリームを使用します。', error);
+    document.getElementById('status').textContent =
+      '自作クリームを読み込めませんでした。models/cream.glb の場所と名前を確認してください。';
+  }
+);
+
+const raycaster = new THREE.Raycaster();
+
+const pointer = new THREE.Vector2();
+
+const placementPlane = new THREE.Plane(
+
+  new THREE.Vector3(0, 1, 0), -cakeTopY()
+
+);
+
+function updatePlacementPlane() {
+
+  placementPlane.constant = -(CAKE_BASE_Y + (selectedTierIndex + 1) * TIER_HEIGHT + 0.065);
+
+}
+
+function createDecoration(type, x, z, surfaceY = cakeTopY()) {
+
+  const item = new THREE.Group();
+
+  item.position.set(x, 0, z);
+
+  item.userData.decorationItem = true;
+  item.userData.sizeScale = 1;
+  item.userData.surfaceY = surfaceY;
+
+  function addSphere(px, py, pz, radius, color, scaleY = 1, scaleX = 1, scaleZ = 1) {
+
+    const mesh = new THREE.Mesh(
+
+      new THREE.SphereGeometry(radius, 28, 20),
+
+      material(color, 0.38)
+
+    );
+
+    mesh.position.set(px, py, pz);
+
+    mesh.scale.set(scaleX, scaleY, scaleZ);
+
+    mesh.castShadow = true;
+
+    mesh.receiveShadow = true;
+
+    mesh.userData.owner = item;
+
+    item.add(mesh);
+
+    return mesh;
+
+  }
+
+  function addCylinder(radiusTop, radiusBottom, height, y, color, segments = 24) {
+
+    const mesh = new THREE.Mesh(
+
+      new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments),
+
+      material(color, 0.35)
+
+    );
+
+    mesh.position.set(0, y, 0);
+
+    mesh.castShadow = true;
+
+    mesh.receiveShadow = true;
+
+    mesh.userData.owner = item;
+
+    item.add(mesh);
+
+    return mesh;
+
+  }
+
+  const top = surfaceY;
+
+  // GLBモデルを使うデコレーション（モデルが未読込の場合は既存の内蔵モデルにフォールバック）
+  if (['strawberry', 'cherry', 'cream2', 'cream3'].includes(type) && decorationModels[type]) {
+    const custom = decorationModels[type].clone(true);
+    custom.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.userData.owner = item;
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        if (obj.material) obj.material = Array.isArray(obj.material)
+          ? obj.material.map(m => m.clone()) : obj.material.clone();
+      }
+    });
+    custom.updateMatrixWorld(true);
+    let bounds = new THREE.Box3().setFromObject(custom);
+    const size = new THREE.Vector3();
+    bounds.getSize(size);
+    const maxDimension = Math.max(size.x, size.y, size.z) || 1;
+    const targetSize = type === 'cream2' || type === 'cream3' ? 0.22 : (type === 'cherry' ? 0.375 : 0.19);
+    custom.scale.setScalar(targetSize / maxDimension);
+    custom.updateMatrixWorld(true);
+    bounds = new THREE.Box3().setFromObject(custom);
+    custom.position.y += top - bounds.min.y;
+    item.add(custom);
+    item.userData.type = type;
+    decorationGroup.add(item);
+    placedDecorations.push(item);
+    return item;
+  }
+
+  // 側面専用の飾りは、クリックしたケーキ側面の位置・向きに合わせて作る
+  if (['sidePearl', 'ribbonSide', 'creamSide', 'racecreamSide', 'racecream2Side'].includes(type)) {
+    // 側面レースクリーム2種は、配置時にケーキ中心方向へ1段階（0.05）寄せた位置を初期位置にする。
+    if (type === 'racecreamSide' || type === 'racecream2Side') {
+      const radius = Math.hypot(x, z);
+      const inwardStep = 0.05;
+      if (radius > inwardStep) {
+        const adjustedRadius = radius - inwardStep;
+        x = x * adjustedRadius / radius;
+        z = z * adjustedRadius / radius;
+      }
+    }
+    const surfacePoint = new THREE.Vector3(x, surfaceY, z);
+    const angle = Math.atan2(z, x);
+    item.position.set(x, surfacePoint.y, z);
+    item.rotation.y = -angle + Math.PI / 2 + (item.userData.rotationOffsetY || 0);
+
+    // GLBの側面パーツはケーキの側面に向け、モデルごとに基準サイズを調整
+    const sideModelTypes = ['ribbonSide', 'creamSide', 'racecreamSide', 'racecream2Side'];
+    if (sideModelTypes.includes(type) && decorationModels[type]) {
+      const custom = decorationModels[type].clone(true);
+      custom.traverse((obj) => {
+        if (obj.isMesh) {
+          obj.userData.owner = item;
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+          if (obj.material) obj.material = Array.isArray(obj.material)
+            ? obj.material.map(m => m.clone()) : obj.material.clone();
+        }
+      });
+      custom.updateMatrixWorld(true);
+      let bounds = new THREE.Box3().setFromObject(custom);
+      const size = new THREE.Vector3();
+      bounds.getSize(size);
+      const maxDimension = Math.max(size.x, size.y, size.z) || 1;
+      const targetSize = type === 'ribbonSide' ? 0.51
+        : type === 'creamSide' ? 0.42
+        : type === 'racecreamSide' ? 0.84 : 0.84;
+      custom.scale.setScalar(targetSize / maxDimension);
+      custom.updateMatrixWorld(true);
+      bounds = new THREE.Box3().setFromObject(custom);
+      // モデルの中心をクリック位置に合わせ、少しだけ側面から浮かせる
+      custom.position.z += 0.025 - (bounds.max.z + bounds.min.z) / 2;
+      custom.position.y -= (bounds.max.y + bounds.min.y) / 2;
+      item.add(custom);
+      item.userData.type = type;
+      item.userData.sideDecoration = true;
+      item.userData.sideSurfaceRadius = Math.sqrt(x * x + z * z);
+      item.userData.sideSurfaceOffset = 0.015;
+      decorationGroup.add(item);
+      placedDecorations.push(item);
+      return item;
+    }
+
+    const pearl = (px, py, pz, r, color, sx = 1, sy = 1, sz = 1) => {
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 16), material(color, 0.28));
+      mesh.position.set(px, py, pz);
+      mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData.owner = item;
+      item.add(mesh);
+      return mesh;
+    };
+    if (type === 'sidePearl') {
+      pearl(0, 0, 0.035, 0.052, '#fff5df');
+      pearl(-0.075, 0, 0.018, 0.032, '#f4d5dc');
+      pearl(0.075, 0, 0.018, 0.032, '#f4d5dc');
+    } else {
+      // リボンの中央結び目と左右のループ、垂れた端
+      pearl(0, 0, 0.045, 0.055, '#d984a6', 1.0, 0.82, 0.55);
+      pearl(-0.105, 0.015, 0.025, 0.075, '#e99bb8', 1.0, 0.62, 0.42);
+      pearl(0.105, 0.015, 0.025, 0.075, '#e99bb8', 1.0, 0.62, 0.42);
+      pearl(-0.045, -0.105, 0.025, 0.085, '#e99bb8', 0.42, 1.0, 0.38);
+      pearl(0.045, -0.105, 0.025, 0.085, '#e99bb8', 0.42, 1.0, 0.38);
+    }
+    item.userData.type = type;
+    item.userData.sideDecoration = true;
+    item.userData.sideSurfaceRadius = Math.sqrt(x * x + z * z);
+    item.userData.sideSurfaceOffset = 0.015;
+    decorationGroup.add(item);
+    placedDecorations.push(item);
+    return item;
+  }
+
+  if (type === 'strawberry') {
+
+    // 先端が少し尖った、いちごらしい輪郭
+
+    const profile = [
+
+      new THREE.Vector2(0.006, -0.125),
+
+      new THREE.Vector2(0.035, -0.105),
+
+      new THREE.Vector2(0.065, -0.065),
+
+      new THREE.Vector2(0.082, -0.015),
+
+      new THREE.Vector2(0.078, 0.035),
+
+      new THREE.Vector2(0.056, 0.075),
+
+      new THREE.Vector2(0.025, 0.098),
+
+      new THREE.Vector2(0.004, 0.103)
+
+    ];
+
+    const berry = new THREE.Mesh(
+
+      new THREE.LatheGeometry(profile, 32),
+
+      material('#e74765', 0.3)
+
+    );
+
+    berry.position.y = top + 0.13;
+
+    berry.castShadow = true;
+
+    berry.receiveShadow = true;
+
+    berry.userData.owner = item;
+
+    item.add(berry);
+
+    // 表面に小さな種を散らす
+
+    for (let row = 0; row < 4; row++) {
+
+      const yy = -0.065 + row * 0.038;
+
+      const r = [0.065, 0.078, 0.073, 0.052][row];
+
+      const count = row === 1 || row === 2 ? 9 : 7;
+
+      for (let i = 0; i < count; i++) {
+
+        const a = (i / count) * Math.PI * 2 + row * 0.27;
+
+        const seed = addSphere(
+
+          Math.cos(a) * r, top + 0.13 + yy, Math.sin(a) * r,
+
+          0.0045, '#f8d8a0', 1.5, 0.72, 0.72
+
+        );
+
+      }
+
+    }
+
+    // 小さな緑のヘタ
+
+    for (let i = 0; i < 5; i++) {
+
+      const a = i / 5 * Math.PI * 2;
+
+      const leaf = addSphere(Math.cos(a) * 0.035, top + 0.229, Math.sin(a) * 0.035,
+
+        0.027, '#5e9a61', 0.28, 1.15, 0.55);
+
+      leaf.rotation.y = -a;
+
+    }
+
+    addSphere(0, top + 0.229, 0, 0.018, '#477e4b', 0.45);
+
+  }
+
+  if (type === 'rose') {
+
+    // 花びらを重ね、中心へ巻き込むロココ調の薔薇
+
+    addSphere(0, top + 0.018, 0, 0.045, '#b94f78', 0.42, 1, 1);
+
+    const petalColors = ['#d96f96', '#e889aa', '#f0a8c0'];
+
+    for (let layer = 0; layer < 3; layer++) {
+
+      const count = layer === 0 ? 5 : 7;
+
+      const radius = [0.018, 0.043, 0.064][layer];
+
+      for (let i = 0; i < count; i++) {
+
+        const a = i / count * Math.PI * 2 + layer * 0.36;
+
+        const petal = addSphere(
+
+          Math.cos(a) * radius,
+
+          top + [0.035, 0.027, 0.018][layer],
+
+          Math.sin(a) * radius,
+
+          [0.031, 0.034, 0.032][layer],
+
+          petalColors[layer],
+
+          0.48, 1.0, 0.72
+
+        );
+
+        petal.rotation.y = -a;
+
+        petal.rotation.z = Math.cos(a) * -0.18;
+
+      }
+
+    }
+
+    // 中心の巻いた花びら
+
+    const curl = addSphere(0, top + 0.052, 0, 0.022, '#f4b1c7', 0.65, 0.75, 0.75);
+
+    curl.rotation.y = 0.5;
+
+  }
+
+  if (type === 'pearl') {
+
+    addSphere(0, top + 0.045, 0, 0.045, '#fffdf5');
+
+    addSphere(-0.012, top + 0.061, 0.012, 0.008, '#ffffff', 0.6, 0.8, 0.8);
+
+  }
+
+  if (type === 'heart') {
+
+    // ハート型の上部2つの丸みと、下へ尖る先端
+
+    addSphere(-0.027, top + 0.046, 0, 0.045, '#df648c', 0.72, 0.95, 0.75);
+
+    addSphere(0.027, top + 0.046, 0, 0.045, '#df648c', 0.72, 0.95, 0.75);
+
+    const point = new THREE.Mesh(
+
+      new THREE.ConeGeometry(0.047, 0.085, 24),
+
+      material('#df648c', 0.32)
+
+    );
+
+    point.rotation.x = Math.PI;
+
+    point.position.set(0, top + 0.024, 0);
+
+    point.scale.set(0.82, 1, 0.62);
+
+    point.castShadow = true;
+
+    point.userData.owner = item;
+
+    item.add(point);
+
+  }
+
+  if (type === 'creamSwirl') {
+    if (customCreamModel) {
+      // 読み込んだモデルを複製し、ゲーム内で扱いやすい大きさに調整
+      const custom = customCreamModel.clone(true);
+      custom.traverse((obj) => {
+        if (obj.isMesh) {
+          obj.userData.owner = item;
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+          // 各配置物でマテリアルを共有しないよう複製
+          if (obj.material) {
+            obj.material = Array.isArray(obj.material)
+              ? obj.material.map(m => m.clone())
+              : obj.material.clone();
+          }
+        }
+      });
+
+      custom.updateMatrixWorld(true);
+      const bounds = new THREE.Box3().setFromObject(custom);
+      const size = new THREE.Vector3();
+      bounds.getSize(size);
+      const maxDimension = Math.max(size.x, size.y, size.z) || 1;
+      const targetSize = 0.22;
+      custom.scale.setScalar(targetSize / maxDimension);
+      custom.updateMatrixWorld(true);
+
+      const scaledBounds = new THREE.Box3().setFromObject(custom);
+      // モデルの底面をケーキ上面に合わせる
+      custom.position.y += top - scaledBounds.min.y;
+      item.add(custom);
+    } else {
+      // GLBがまだ読み込み中、または見つからない場合は内蔵クリームを表示
+
+
+    // 絞り袋のクリームをイメージした、上へ巻き上がる立体的な渦
+
+    const points = [];
+
+    const turns = 2.45;
+
+    for (let i = 0; i <= 64; i++) {
+
+      const t = i / 64;
+
+      const a = t * turns * Math.PI * 2;
+
+      const r = 0.064 * (1 - t * 0.82);
+
+      points.push(new THREE.Vector3(
+
+        Math.cos(a) * r,
+
+        top + 0.018 + t * 0.105,
+
+        Math.sin(a) * r
+
+      ));
+
+    }
+
+    const curve = new THREE.CatmullRomCurve3(points);
+
+    const swirl = new THREE.Mesh(
+
+      new THREE.TubeGeometry(curve, 96, 0.018, 10, false),
+
+      material(creamColor, 0.28)
+
+    );
+
+    swirl.castShadow = true;
+
+    swirl.receiveShadow = true;
+
+    swirl.userData.owner = item;
+
+    item.add(swirl);
+
+    addSphere(0, top + 0.023, 0, 0.038, creamColor, 0.55);
+
+    addSphere(0.003, top + 0.126, 0, 0.018, creamColor, 1.2, 0.8, 0.8);
+
+      }
+  }
+
+  if (type === 'candle') {
+
+    addCylinder(0.023, 0.027, 0.22, top + 0.11, '#fff6f8');
+
+    // ろうそくの斜めストライプ風の帯
+
+    for (let i = 0; i < 5; i++) {
+
+      const y = top + 0.035 + i * 0.038;
+
+      const band = new THREE.Mesh(
+
+        new THREE.TorusGeometry(0.025, 0.0035, 6, 24),
+
+        material('#e99abd', 0.3)
+
+      );
+
+      band.rotation.x = Math.PI / 2;
+
+      band.position.y = y;
+
+      band.userData.owner = item;
+
+      item.add(band);
+
+    }
+
+    addCylinder(0.004, 0.004, 0.022, top + 0.235, '#51444a', 12);
+
+    // 炎は涙型に近い2層構造
+
+    addSphere(0, top + 0.268, 0, 0.025, '#ff9d35', 1.65, 0.78, 0.78);
+
+    addSphere(0, top + 0.264, 0.006, 0.013, '#fff2a8', 1.5, 0.72, 0.72);
+
+  }
+
+  item.userData.type = type;
+
+  decorationGroup.add(item);
+
+  placedDecorations.push(item);
+
+  return item;
+
+}
+
+function clearPlacedDecorations() {
+
+  for (const item of placedDecorations) {
+
+    decorationGroup.remove(item);
+
+    item.traverse(obj => {
+
+      if (obj.geometry) obj.geometry.dispose();
+
+      if (obj.material) {
+
+        if (Array.isArray(obj.material)) {
+
+          obj.material.forEach(m => m.dispose());
+
+        } else {
+
+          obj.material.dispose();
+
+        }
+
+      }
+
+    });
+
+  }
+
+  placedDecorations.length = 0;
+
+  selectedItem = null;
+
+}
+
+function updatePointer(event) {
+
+  const rect = renderer.domElement.getBoundingClientRect();
+
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+}
+
+function findDecoration(event) {
+
+  updatePointer(event);
+
+  const hits = raycaster.intersectObjects(
+
+    placedDecorations,
+
+    true
+
+  );
+
+  for (const hit of hits) {
+
+    let obj = hit.object;
+
+    while (obj && !obj.userData.owner) {
+
+      obj = obj.parent;
+
+    }
+
+    if (obj && obj.userData.owner) {
+
+      return obj.userData.owner;
+
+    }
+
+  }
+
+  return null;
+
+}
+
+function getCakePosition(event) {
+
+  updatePointer(event);
+
+  // 側面用の飾りは、スポンジ／クリームの表面にレイを当てて配置する
+  if (['sidePearl', 'ribbonSide', 'creamSide', 'racecreamSide', 'racecream2Side'].includes(decoration)) {
+    const hits = raycaster.intersectObjects([spongeGroup, creamGroup], true);
+    if (!hits.length) return null;
+    const hit = hits.find(h => Math.abs(h.face?.normal?.y ?? 0) < 0.75);
+    if (!hit) return null;
+    // Raycast hit.point はワールド座標なので、回転したケーキのローカル座標へ変換する
+    const point = cake.worldToLocal(hit.point.clone());
+    const radial = Math.sqrt(point.x * point.x + point.z * point.z);
+    if (radial < 0.05) return null;
+    return point;
+  }
+
+  const point = new THREE.Vector3();
+  if (!raycaster.ray.intersectPlane(placementPlane, point)) return null;
+
+  // 配置判定もケーキ基準の座標で行う。回転後もクリック位置と飾り位置が一致する。
+  cake.worldToLocal(point);
+  const radius = Math.sqrt(point.x ** 2 + point.z ** 2);
+  const maxRadius = tierRadius(selectedTierIndex) * 0.94;
+  if (cakeShape === 'round') {
+    if (radius > maxRadius) return null;
+  } else {
+    if (Math.abs(point.x) > maxRadius || Math.abs(point.z) > maxRadius) return null;
+  }
+  return point;
+}
+
+// 飾りのサイズ管理（選択中の強調表示をサイズ倍率と分けて管理）
+function applyItemScale(item, selected = false) {
+  if (!item) return;
+
+  const size = item.userData.sizeScale || 1;
+  const displayScale = size * (selected ? 1.12 : 1);
+
+  // 側面飾りは、円周方向の位置を保ちながら表面に沿わせる
+  if (item.userData.sideDecoration) {
+    item.scale.set(displayScale, displayScale, displayScale);
+    const center = new THREE.Vector3(item.position.x, 0, item.position.z);
+    const radius = Math.sqrt(center.x * center.x + center.z * center.z);
+    if (radius > 0.0001) {
+      const outward = new THREE.Vector3(center.x / radius, 0, center.z / radius);
+      const baseOffset = item.userData.sideSurfaceOffset ?? 0.015;
+      // depthOffset は中心からの距離の追加分。サイズ調整時にも外側／内側の位置を維持する。
+      const desiredRadius = (item.userData.sideSurfaceRadius ?? radius) + (item.userData.depthOffset || 0);
+      const correction = desiredRadius + baseOffset * (size - 1) - radius;
+      item.position.x += outward.x * correction;
+      item.position.z += outward.z * correction;
+    }
+    return;
+  }
+
+  // 上面の飾りは「中心」ではなく「底面」を基準に拡大縮小する。
+  // まず等倍状態でモデル全体の底面を計算し、モデルごとの原点の違いを吸収する。
+  item.scale.set(1, 1, 1);
+  item.updateMatrixWorld(true);
+
+  if (item.userData.localBottomY === undefined) {
+    const worldBounds = new THREE.Box3().setFromObject(item);
+    if (!worldBounds.isEmpty()) {
+      const inv = item.matrixWorld.clone().invert();
+      const corners = [
+        new THREE.Vector3(worldBounds.min.x, worldBounds.min.y, worldBounds.min.z),
+        new THREE.Vector3(worldBounds.min.x, worldBounds.min.y, worldBounds.max.z),
+        new THREE.Vector3(worldBounds.min.x, worldBounds.max.y, worldBounds.min.z),
+        new THREE.Vector3(worldBounds.min.x, worldBounds.max.y, worldBounds.max.z),
+        new THREE.Vector3(worldBounds.max.x, worldBounds.min.y, worldBounds.min.z),
+        new THREE.Vector3(worldBounds.max.x, worldBounds.min.y, worldBounds.max.z),
+        new THREE.Vector3(worldBounds.max.x, worldBounds.max.y, worldBounds.min.z),
+        new THREE.Vector3(worldBounds.max.x, worldBounds.max.y, worldBounds.max.z)
+      ];
+      let localBottom = Infinity;
+      for (const corner of corners) {
+        corner.applyMatrix4(inv);
+        localBottom = Math.min(localBottom, corner.y);
+      }
+      item.userData.localBottomY = Number.isFinite(localBottom) ? localBottom : 0;
+    } else {
+      item.userData.localBottomY = 0;
+    }
+  }
+
+  item.scale.set(displayScale, displayScale, displayScale);
+  const targetY = item.userData.surfaceY ?? cakeTopY();
+  item.position.y = targetY - item.userData.localBottomY * displayScale;
+  item.updateMatrixWorld(true);
+}
+
+function updateScaleLabel() {
+  const label = document.getElementById('scaleLabel');
+  if (!selectedItem) {
+    label.textContent = '飾りをクリックして選択してください';
+    return;
+  }
+  const percent = Math.round((selectedItem.userData.sizeScale || 1) * 100);
+  label.textContent = `サイズ：${percent}%`;
+}
+
+function updateRotationLabel() {
+  const label = document.getElementById('rotationLabel');
+  if (!selectedItem) {
+    label.textContent = '飾りをクリックして選択してください';
+    return;
+  }
+  const degrees = Math.round(THREE.MathUtils.radToDeg(selectedItem.userData.rotationOffsetY || 0));
+  label.textContent = `向き：${degrees}°`;
+}
+
+function updateDepthLabel() {
+  const label = document.getElementById('depthLabel');
+  if (!selectedItem) {
+    label.textContent = '側面の飾りをクリックして選択してください';
+    return;
+  }
+  if (!selectedItem.userData.sideDecoration) {
+    label.textContent = 'この操作は側面の飾り専用です';
+    return;
+  }
+  const offset = selectedItem.userData.depthOffset || 0;
+  label.textContent = `外側への調整：${offset > 0 ? '+' : ''}${offset.toFixed(2)}（外側＋／内側−）`;
+}
+
+function moveSelectedDecorationDepth(direction) {
+  if (!selectedItem) {
+    document.getElementById('status').textContent = '調整したい側面の飾りをクリックして選んでください。';
+    return;
+  }
+  if (!selectedItem.userData.sideDecoration) {
+    document.getElementById('status').textContent = 'この操作は側面の飾り専用です。側面の飾りを選んでください。';
+    updateDepthLabel();
+    return;
+  }
+  const step = 0.05 * direction;
+  if (!selectedItem.userData.depthOrigin) {
+    selectedItem.userData.depthOrigin = {
+      x: selectedItem.position.x,
+      y: selectedItem.position.y,
+      z: selectedItem.position.z,
+      rotationY: selectedItem.rotation.y
+    };
+  }
+  // 基準半径に depthOffset を加算し、側面上の角度は変えずに内外へ動かす。
+  selectedItem.userData.depthOffset = (selectedItem.userData.depthOffset || 0) + step;
+  const baseRadius = selectedItem.userData.sideSurfaceRadius ?? Math.hypot(selectedItem.position.x, selectedItem.position.z);
+  selectedItem.userData.depthOffset = Math.max(0.05 - baseRadius, selectedItem.userData.depthOffset);
+  applyItemScale(selectedItem, true);
+  updateDepthLabel();
+}
+
+function resetSelectedDecorationDepth() {
+  if (!selectedItem) {
+    document.getElementById('status').textContent = '位置を戻したい側面の飾りをクリックして選んでください。';
+    return;
+  }
+  if (!selectedItem.userData.sideDecoration) {
+    document.getElementById('status').textContent = 'この操作は側面の飾り専用です。側面の飾りを選んでください。';
+    updateDepthLabel();
+    return;
+  }
+  const origin = selectedItem.userData.depthOrigin;
+  if (origin) {
+    selectedItem.position.x = origin.x;
+    selectedItem.position.y = origin.y;
+    selectedItem.position.z = origin.z;
+    selectedItem.rotation.y = origin.rotationY;
+  }
+  delete selectedItem.userData.depthOrigin;
+  selectedItem.userData.depthOffset = 0;
+  applyItemScale(selectedItem, true);
+  updateDepthLabel();
+}
+
+document.getElementById('moveDecorationBack').addEventListener('click', () => moveSelectedDecorationDepth(-1));
+document.getElementById('moveDecorationFront').addEventListener('click', () => moveSelectedDecorationDepth(1));
+document.getElementById('moveDecorationDepthReset').addEventListener('click', resetSelectedDecorationDepth);
+
+function forEachDecorationMaterial(item, callback) {
+  if (!item) return;
+  item.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const mat of materials) {
+      if (mat && mat.color && typeof mat.color.set === 'function') callback(mat);
+    }
+  });
+}
+
+function updateDecorationColorLabel(message) {
+  const label = document.getElementById('decorationColorLabel');
+  if (!selectedItem) {
+    label.textContent = '飾りをクリックして選択してください';
+  } else {
+    label.textContent = message || '選択中の飾りに色を適用できます';
+  }
+}
+
+function applySelectedDecorationColor() {
+  if (!selectedItem) {
+    document.getElementById('status').textContent = '色を変えたい飾りをクリックして選んでください。';
+    updateDecorationColorLabel();
+    return;
+  }
+  const hex = document.getElementById('decorationColorPicker').value;
+  let count = 0;
+  forEachDecorationMaterial(selectedItem, (mat) => {
+    if (mat.userData.originalDecorationColor === undefined) {
+      mat.userData.originalDecorationColor = mat.color.getHex();
+    }
+    mat.color.set(hex);
+    mat.needsUpdate = true;
+    count++;
+  });
+  if (count) {
+    selectedItem.userData.customDecorationColor = hex;
+    updateDecorationColorLabel(`適用中：${hex.toUpperCase()}`);
+    document.getElementById('status').textContent = '選択した飾りの色を変更しました。';
+  } else {
+    updateDecorationColorLabel('この飾りには色を変更できる素材がありません');
+  }
+}
+
+function resetSelectedDecorationColor() {
+  if (!selectedItem) {
+    document.getElementById('status').textContent = '色を戻したい飾りをクリックして選んでください。';
+    updateDecorationColorLabel();
+    return;
+  }
+  let count = 0;
+  forEachDecorationMaterial(selectedItem, (mat) => {
+    if (mat.userData.originalDecorationColor !== undefined) {
+      mat.color.setHex(mat.userData.originalDecorationColor);
+      delete mat.userData.originalDecorationColor;
+      mat.needsUpdate = true;
+      count++;
+    }
+  });
+  delete selectedItem.userData.customDecorationColor;
+  updateDecorationColorLabel(count ? '元の色に戻しました' : 'この飾りはまだ色を変更していません');
+  if (count) document.getElementById('status').textContent = '選択した飾りを元の色に戻しました。';
+}
+
+document.getElementById('applyDecorationColor').addEventListener('click', applySelectedDecorationColor);
+document.getElementById('resetDecorationColor').addEventListener('click', resetSelectedDecorationColor);
+
+function rotateSelectedDecoration(degrees) {
+  if (!selectedItem) {
+    document.getElementById('status').textContent = '向きを変えたい飾りをクリックして選んでください。';
+    return;
+  }
+  const delta = THREE.MathUtils.degToRad(degrees);
+  selectedItem.userData.rotationOffsetY = (selectedItem.userData.rotationOffsetY || 0) + delta;
+  selectedItem.rotation.y += delta;
+  updateRotationLabel();
+}
+
+document.getElementById('rotateDecorationLeft').addEventListener('click', () => rotateSelectedDecoration(-15));
+document.getElementById('rotateDecorationRight').addEventListener('click', () => rotateSelectedDecoration(15));
+document.getElementById('rotateDecorationReset').addEventListener('click', () => {
+  if (!selectedItem) {
+    document.getElementById('status').textContent = '向きを戻したい飾りをクリックして選んでください。';
+    return;
+  }
+  const offset = selectedItem.userData.rotationOffsetY || 0;
+  selectedItem.rotation.y -= offset;
+  selectedItem.userData.rotationOffsetY = 0;
+  updateRotationLabel();
+});
+
+function changeSelectedSize(multiplier) {
+  if (!selectedItem) {
+    document.getElementById('status').textContent = '大きさを変えたい飾りをクリックして選んでください。';
+    return;
+  }
+  const current = selectedItem.userData.sizeScale || 1;
+  selectedItem.userData.sizeScale = Math.max(0.35, Math.min(2.5, current * multiplier));
+  applyItemScale(selectedItem, true);
+  updateScaleLabel();
+}
+
+document.getElementById('scaleDown').addEventListener('click', () => changeSelectedSize(0.85));
+document.getElementById('scaleUp').addEventListener('click', () => changeSelectedSize(1.18));
+document.getElementById('scaleReset').addEventListener('click', () => {
+  if (!selectedItem) {
+    document.getElementById('status').textContent = '大きさを戻したい飾りをクリックして選んでください。';
+    return;
+  }
+  selectedItem.userData.sizeScale = 1;
+  applyItemScale(selectedItem, true);
+  updateScaleLabel();
+});
+
+// --------------------------------
+
+// 飾りを選ぶ
+
+// --------------------------------
+
+document.querySelectorAll('#decorationChoices button')
+
+  .forEach(button => {
+
+    button.addEventListener('click', () => {
+
+      decoration = button.dataset.decoration;
+
+      document.querySelectorAll('#decorationChoices button')
+
+        .forEach(b => b.classList.remove('active'));
+
+      button.classList.add('active');
+
+      document.getElementById('status').textContent =
+
+        (['sidePearl', 'ribbonSide', 'creamSide', 'racecreamSide', 'racecream2Side'].includes(decoration))
+          ? 'ケーキの側面をクリックして飾りを置きましょう。'
+          : 'ケーキの上をクリックして飾りを置きましょう。';
+
+      // 新しい飾りを選ぶと、配置済みの飾りの選択を解除
+
+      if (selectedItem) {
+
+        applyItemScale(selectedItem, false);
+
+        selectedItem = null;
+        updateScaleLabel();
+
+      }
+
+    });
+
+  });
+
+// --------------------------------
+
+// 配置・選択・ドラッグ移動
+
+// --------------------------------
+
+let draggingItem = null;
+
+let pointerDownX = 0;
+
+let pointerDownY = 0;
+
+let moved = false;
+let rotateModeEnabled = false;
+let rotatingCake = false;
+let rotateLastX = 0;
+
+const rotateModeButton = document.getElementById('rotateMode');
+rotateModeButton.addEventListener('click', () => {
+  rotateModeEnabled = !rotateModeEnabled;
+  rotateModeButton.textContent = rotateModeEnabled ? '回転モード：ON（ドラッグで回転）' : '回転モード：OFF';
+  rotateModeButton.classList.toggle('active', rotateModeEnabled);
+  document.getElementById('status').textContent = rotateModeEnabled
+    ? 'ケーキやお皿の上を左右にドラッグして回転できます。'
+    : '飾り付けモードに戻りました。';
+});
+
+renderer.domElement.addEventListener('pointerdown', event => {
+
+  if (event.button !== 0) return;
+
+  if (rotateModeEnabled) {
+    rotatingCake = true;
+    rotateLastX = event.clientX;
+    controls.enabled = false;
+    renderer.domElement.setPointerCapture(event.pointerId);
+    return;
+  }
+
+  pointerDownX = event.clientX;
+
+  pointerDownY = event.clientY;
+
+  moved = false;
+
+  const hitItem = findDecoration(event);
+
+  if (hitItem) {
+
+    if (selectedItem && selectedItem !== hitItem) {
+
+      applyItemScale(selectedItem, false);
+
+    }
+
+    selectedItem = hitItem;
+
+    applyItemScale(selectedItem, true);
+    updateScaleLabel();
+    updateRotationLabel();
+    updateDepthLabel();
+    updateDecorationColorLabel(selectedItem.userData.customDecorationColor ? `適用中：${selectedItem.userData.customDecorationColor.toUpperCase()}` : '選択中の飾りに色を適用できます');
+
+    draggingItem = hitItem;
+
+    controls.enabled = false;
+
+    renderer.domElement.setPointerCapture(event.pointerId);
+
+    document.getElementById('status').textContent =
+
+      'ドラッグして飾りを移動できます。';
+
+    return;
+
+  }
+
+  const point = getCakePosition(event);
+
+  if (point) {
+
+    if (selectedItem) {
+
+      applyItemScale(selectedItem, false);
+
+    }
+
+    selectedItem = createDecoration(
+
+      decoration,
+
+      point.x,
+
+      point.z,
+
+      point.y
+
+    );
+
+    applyItemScale(selectedItem, true);
+    updateScaleLabel();
+    updateRotationLabel();
+    updateDepthLabel();
+    updateDecorationColorLabel('選択中の飾りに色を適用できます');
+
+    document.getElementById('status').textContent =
+
+      (['sidePearl', 'ribbonSide', 'creamSide', 'racecreamSide', 'racecream2Side'].includes(decoration))
+        ? '側面に飾りを配置しました。ドラッグで移動できます。'
+        : '飾りを配置しました。ドラッグで移動できます。';
+
+  } else {
+
+    if (selectedItem) {
+
+      applyItemScale(selectedItem, false);
+
+      selectedItem = null;
+      updateScaleLabel();
+      updateRotationLabel();
+      updateDepthLabel();
+
+    }
+
+  }
+
+});
+
+renderer.domElement.addEventListener('pointermove', event => {
+
+  if (rotatingCake) {
+    const deltaX = event.clientX - rotateLastX;
+    cake.rotation.y += deltaX * 0.012;
+    rotateLastX = event.clientX;
+    return;
+  }
+
+  if (!draggingItem) return;
+
+  if (
+
+    Math.abs(event.clientX - pointerDownX) > 3 ||
+
+    Math.abs(event.clientY - pointerDownY) > 3
+
+  ) {
+
+    moved = true;
+
+  }
+
+  const point = getCakePosition(event);
+
+  if (point) {
+
+    draggingItem.position.x = point.x;
+
+    draggingItem.position.z = point.z;
+
+    if (draggingItem.userData.sideDecoration) {
+      draggingItem.position.y = point.y;
+      draggingItem.rotation.y = -Math.atan2(point.z, point.x) + Math.PI / 2 + (draggingItem.userData.rotationOffsetY || 0);
+    }
+
+  }
+
+});
+
+function finishDragging() {
+
+  if (rotatingCake) {
+    rotatingCake = false;
+    controls.enabled = true;
+  }
+
+  if (!draggingItem) return;
+
+  draggingItem = null;
+
+  controls.enabled = true;
+
+}
+
+renderer.domElement.addEventListener(
+
+  'pointerup', finishDragging
+
+);
+
+renderer.domElement.addEventListener(
+
+  'pointercancel', finishDragging
+
+);
+
+// --------------------------------
+
+// 選択した飾りを削除
+
+// --------------------------------
+
+document.getElementById('deleteDecoration')
+
+  .addEventListener('click', () => {
+
+    if (!selectedItem) {
+
+      document.getElementById('status').textContent =
+
+        '削除したい飾りをクリックして選んでください。';
+
+      return;
+
+    }
+
+    const index = placedDecorations.indexOf(selectedItem);
+
+    if (index !== -1) {
+
+      decorationGroup.remove(selectedItem);
+
+      selectedItem.traverse(obj => {
+
+        if (obj.geometry) obj.geometry.dispose();
+
+        if (obj.material) {
+
+          if (Array.isArray(obj.material)) {
+
+            obj.material.forEach(m => m.dispose());
+
+          } else {
+
+            obj.material.dispose();
+
+          }
+
+        }
+
+      });
+
+      placedDecorations.splice(index, 1);
+
+    }
+
+    selectedItem = null;
+    updateScaleLabel();
+
+    document.getElementById('status').textContent =
+
+      '選択した飾りを削除しました。';
+
+  });
+
+// --------------------------------
+
+// 飾りをすべて削除
+
+// --------------------------------
+
+document.getElementById('clearDecorations')
+
+  .addEventListener('click', () => {
+
+    clearPlacedDecorations();
+
+    document.getElementById('status').textContent =
+
+      'すべての飾りを削除しました。';
+
+  });
+
+    // --------------------------------
+
+    // 初期状態を作る
+
+    // --------------------------------
+
+    function renderTargetTierChoices() {
+      const container = document.getElementById('targetTierChoices');
+      if (!container) return;
+      container.innerHTML = '';
+      // 画面上では「上段・中段・下段」の順に並べる
+      for (let i = tierCount - 1; i >= 0; i--) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = tierCount === 1 ? '1段目' : `${i + 1}段目${i === tierCount - 1 ? '（上）' : i === 0 ? '（下）' : ''}`;
+        button.classList.toggle('active', i === selectedTierIndex);
+        button.addEventListener('click', () => {
+          selectedTierIndex = i;
+          renderTargetTierChoices();
+          updatePlacementPlane();
+          document.getElementById('status').textContent = `飾りを置く段を「${i + 1}段目」にしました。パーツを選んでケーキの上をクリックしてください。`;
+        });
+        container.appendChild(button);
+      }
+    }
+
+    function rebuildCake() {
+
+      buildPlate();
+
+      buildSponge();
+
+      buildCream();
+
+      updatePlacementPlane();
+
+    }
+
+    function applyCakeSettings() {
+
+      clearPlacedDecorations();
+
+      rebuildCake();
+
+      document.getElementById('status').textContent =
+
+        'ケーキの形と段数を変更しました。飾りを置き直してください。';
+
+    }
+
+    document.querySelectorAll('#shapeChoices button').forEach(button => {
+
+      button.addEventListener('click', () => {
+
+        cakeShape = button.dataset.shape;
+
+        document.querySelectorAll('#shapeChoices button')
+
+          .forEach(b => b.classList.remove('active'));
+
+        button.classList.add('active');
+
+        applyCakeSettings();
+
+      });
+
+    });
+
+    document.querySelectorAll('#tierChoices button').forEach(button => {
+
+      button.addEventListener('click', () => {
+
+        tierCount = Number(button.dataset.tiers);
+        selectedTierIndex = Math.min(selectedTierIndex, tierCount - 1);
+        renderTargetTierChoices();
+
+        document.querySelectorAll('#tierChoices button')
+
+          .forEach(b => b.classList.remove('active'));
+
+        button.classList.add('active');
+
+        applyCakeSettings();
+
+      });
+
+    });
+
+    rebuildCake();
+
+    // --------------------------------
+
+    // UI：スポンジの選択
+
+    // --------------------------------
+
+    document.querySelectorAll('#spongeChoices button')
+
+      .forEach(button => {
+
+        button.addEventListener('click', () => {
+
+          spongeColor = button.dataset.color;
+
+          document.querySelectorAll('#spongeChoices button')
+
+            .forEach(b => b.classList.remove('active'));
+
+          button.classList.add('active');
+
+          buildSponge();
+
+          document.getElementById('status').textContent =
+
+            'スポンジを変更しました。';
+
+        });
+
+      });
+
+    // --------------------------------
+
+    // UI：クリームの色
+
+    // --------------------------------
+
+    document.querySelectorAll('#creamChoices button')
+
+      .forEach(button => {
+
+        button.addEventListener('click', () => {
+
+          creamColor = button.dataset.color;
+
+          document.querySelectorAll('#creamChoices button')
+
+            .forEach(b => b.classList.remove('active'));
+
+          button.classList.add('active');
+
+          buildCream();
+
+          document.getElementById('status').textContent =
+
+            'クリームの色を変更しました。';
+
+        });
+
+      });
+
+    // UI：クリームの仕上げ（上部だけ／全体をコーティング）
+    const creamCoverageTopButton = document.getElementById('creamCoverageTop');
+    const creamCoverageFullButton = document.getElementById('creamCoverageFull');
+    function updateCreamCoverageButtons() {
+      creamCoverageTopButton.classList.toggle('active', !fullCreamCoverage);
+      creamCoverageFullButton.classList.toggle('active', fullCreamCoverage);
+    }
+    creamCoverageTopButton.addEventListener('click', () => {
+      fullCreamCoverage = false;
+      updateCreamCoverageButtons();
+      buildCream();
+      document.getElementById('status').textContent = '上部中心のクリーム仕上げにしました。';
+    });
+    creamCoverageFullButton.addEventListener('click', () => {
+      fullCreamCoverage = true;
+      updateCreamCoverageButtons();
+      buildCream();
+      document.getElementById('status').textContent = 'ケーキ全体をクリームでコーティングしました。';
+    });
+
+
+    // --------------------------------
+
+    // UI：お皿
+
+    // --------------------------------
+
+    document.querySelectorAll('#plateChoices button')
+
+      .forEach(button => {
+
+        button.addEventListener('click', () => {
+
+          plateColor = button.dataset.plate;
+
+          document.querySelectorAll('#plateChoices button')
+
+            .forEach(b => b.classList.remove('active'));
+
+          button.classList.add('active');
+
+          buildPlate();
+
+          document.getElementById('status').textContent =
+
+            'お皿を変更しました。';
+
+        });
+
+      });
+
+    // --------------------------------
+
+    // リセット
+
+    // --------------------------------
+
+     document.getElementById('reset').addEventListener('click', () => {
+
+        clearPlacedDecorations();
+
+        spongeColor = '#e8bb88';
+
+        creamColor = '#fff3f5';
+
+        plateColor = '#fffdfc';
+
+        decoration = 'strawberry';
+
+        cakeShape = 'round';
+
+        tierCount = 1;
+        selectedTierIndex = 0;
+        renderTargetTierChoices();
+
+        document.querySelectorAll('button.active')
+
+          .forEach(b => b.classList.remove('active'));
+
+        document.querySelector('#shapeChoices button[data-shape="round"]')
+
+          .classList.add('active');
+
+        document.querySelector('#tierChoices button[data-tiers="1"]')
+
+          .classList.add('active');
+
+        document.querySelector('#spongeChoices button')
+
+          .classList.add('active');
+
+        document.querySelector('#creamChoices button')
+
+          .classList.add('active');
+
+        document.querySelector('#decorationChoices button')
+
+          .classList.add('active');
+
+        document.querySelector('#plateChoices button')
+
+          .classList.add('active');
+
+        rebuildCake();
+
+        document.getElementById('status').textContent =
+
+          '最初の状態に戻しました。';
+
+     });
+
+    // --------------------------------
+
+    // ウィンドウサイズ変更
+
+    // --------------------------------
+
+    window.addEventListener('resize', () => {
+
+      camera.aspect = window.innerWidth / window.innerHeight;
+
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(
+
+        window.innerWidth,
+
+        window.innerHeight
+
+      );
+
+    });
+
+    // --------------------------------
+
+    // 描画
+
+    // --------------------------------
+
+
+    // --------------------------------
+    // ケーキ写真・アルバム機能
+    // --------------------------------
+    const CAKE_ALBUM_KEY = 'maPetitePatisserie.cakeAlbum.v1';
+    const albumPanel = document.getElementById('albumPanel');
+    const albumGrid = document.getElementById('albumGrid');
+    const albumEmpty = document.getElementById('albumEmpty');
+    const albumBookOverlay = document.getElementById('albumBookOverlay');
+
+    function openAlbumBook() {
+      renderCakeAlbum();
+      albumBookOverlay.classList.add('open');
+      albumBookOverlay.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeAlbumBook() {
+      albumBookOverlay.classList.remove('open');
+      albumBookOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function loadCakeAlbum() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(CAKE_ALBUM_KEY) || '[]');
+        return Array.isArray(saved) ? saved : [];
+      } catch (error) {
+        console.warn('アルバムを読み込めませんでした:', error);
+        return [];
+      }
+    }
+
+    let cakeAlbum = loadCakeAlbum();
+
+    function saveCakeAlbum() {
+      try {
+        localStorage.setItem(CAKE_ALBUM_KEY, JSON.stringify(cakeAlbum));
+        return true;
+      } catch (error) {
+        alert('保存容量がいっぱいのようです。アルバムの写真を削除するか、写真をダウンロードしてから再度お試しください。');
+        console.warn('アルバムを保存できませんでした:', error);
+        return false;
+      }
+    }
+
+    // 写真を撮った瞬間のケーキ設定と飾りの配置を保存し、あとから現在のケーキに再現できるようにする
+    function captureCakeDesign() {
+      return {
+        cakeShape,
+        tierCount,
+        spongeColor,
+        creamColor,
+        fullCreamCoverage,
+        decorations: placedDecorations.map(item => ({
+          type: item.userData.type,
+          position: { x: item.position.x, y: item.position.y, z: item.position.z },
+          rotation: { x: item.rotation.x, y: item.rotation.y, z: item.rotation.z },
+          scale: { x: item.scale.x, y: item.scale.y, z: item.scale.z },
+          surfaceY: item.userData.surfaceY ?? cakeTopY(),
+          sizeScale: item.userData.sizeScale ?? 1,
+          sideDecoration: !!item.userData.sideDecoration,
+          sideSurfaceRadius: item.userData.sideSurfaceRadius,
+          sideSurfaceOffset: item.userData.sideSurfaceOffset
+        }))
+      };
+    }
+
+    function applyCakeDesign(design) {
+      if (!design || !Array.isArray(design.decorations)) {
+        alert('この写真には再現用のデコレーション情報がありません。新しい写真を撮影してお試しください。');
+        return;
+      }
+      if (!confirm('今のケーキの形・段数・飾りを、選んだ写真のデザインに置き換えますか？')) return;
+
+      // 写真撮影時のケーキ設定を復元
+      if (design.cakeShape) cakeShape = design.cakeShape;
+      if (Number.isFinite(design.tierCount)) tierCount = design.tierCount;
+      if (design.spongeColor) spongeColor = design.spongeColor;
+      if (design.creamColor) creamColor = design.creamColor;
+      if (typeof design.fullCreamCoverage === 'boolean') fullCreamCoverage = design.fullCreamCoverage;
+
+      clearPlacedDecorations();
+      rebuildCake();
+
+      // UIの選択状態もケーキの形・段数に合わせる
+      document.querySelectorAll('#shapeChoices button').forEach(button => {
+        button.classList.toggle('active', button.dataset.shape === cakeShape);
+      });
+      document.querySelectorAll('#tierChoices button').forEach(button => {
+        const value = Number(button.dataset.tiers || button.dataset.tierCount || button.value);
+        if (Number.isFinite(value) && value > 0) button.classList.toggle('active', value === tierCount);
+      });
+      if (typeof renderTargetTierChoices === 'function') renderTargetTierChoices();
+
+      for (const saved of design.decorations) {
+        if (!saved || !saved.type || !saved.position) continue;
+        const item = createDecoration(saved.type, saved.position.x, saved.position.z, saved.surfaceY);
+        item.position.set(saved.position.x, saved.position.y, saved.position.z);
+        if (saved.rotation) item.rotation.set(saved.rotation.x || 0, saved.rotation.y || 0, saved.rotation.z || 0);
+        if (saved.scale) item.scale.set(saved.scale.x || 1, saved.scale.y || 1, saved.scale.z || 1);
+        if (Number.isFinite(saved.sizeScale)) item.userData.sizeScale = saved.sizeScale;
+        if (saved.sideDecoration) item.userData.sideDecoration = true;
+        if (Number.isFinite(saved.sideSurfaceRadius)) item.userData.sideSurfaceRadius = saved.sideSurfaceRadius;
+        if (Number.isFinite(saved.sideSurfaceOffset)) item.userData.sideSurfaceOffset = saved.sideSurfaceOffset;
+      }
+      selectedItem = null;
+      document.getElementById('status').textContent = 'アルバムのデザインをケーキに再現しました。';
+      closeAlbumBook();
+    }
+
+    function renderCakeAlbum() {
+      albumGrid.replaceChildren();
+      albumEmpty.style.display = cakeAlbum.length ? 'none' : 'block';
+      cakeAlbum.forEach((photo, index) => {
+        const card = document.createElement('div');
+        card.className = 'album-card';
+        const img = document.createElement('img');
+        img.src = photo.image;
+        img.alt = photo.name || `ケーキ写真 ${index + 1}`;
+        img.title = 'クリックして画像をダウンロード';
+        img.addEventListener('click', () => downloadCakePhoto(photo));
+        const caption = document.createElement('small');
+        caption.textContent = photo.name || `Cake ${index + 1}`;
+        const download = document.createElement('button');
+        download.type = 'button';
+        download.textContent = '画像を保存';
+        download.addEventListener('click', () => downloadCakePhoto(photo));
+        const applyDesign = document.createElement('button');
+        applyDesign.type = 'button';
+        applyDesign.className = 'apply-photo-design';
+        applyDesign.textContent = 'このデザインを再現';
+        applyDesign.disabled = !photo.design;
+        if (!photo.design) {
+          applyDesign.title = '以前に撮影した写真にはデザイン情報がないため再現できません';
+          applyDesign.style.opacity = '0.5';
+          applyDesign.style.cursor = 'not-allowed';
+        }
+        applyDesign.addEventListener('click', () => applyCakeDesign(photo.design));
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = '削除';
+        remove.style.marginTop = '4px';
+        remove.addEventListener('click', () => {
+          cakeAlbum.splice(index, 1);
+          if (saveCakeAlbum()) renderCakeAlbum();
+        });
+        card.append(img, caption, download, applyDesign, remove);
+        albumGrid.appendChild(card);
+      });
+    }
+
+    function downloadCakePhoto(photo) {
+      const link = document.createElement('a');
+      link.href = photo.image;
+      link.download = `${(photo.name || 'my-cake').replace(/[^a-zA-Z0-9ぁ-んァ-ヶ一-龠_-]/g, '_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    document.getElementById('takeCakePhoto').addEventListener('click', () => {
+      try {
+        // 最新の状態を描画してからキャンバスを画像化
+        renderer.render(scene, camera);
+        const image = renderer.domElement.toDataURL('image/png');
+        const now = new Date();
+        const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const photo = { id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`, name: `Cake ${cakeAlbum.length + 1}`, createdAt: now.toISOString(), image, design: captureCakeDesign() };
+        cakeAlbum.unshift(photo);
+        if (!saveCakeAlbum()) {
+          cakeAlbum.shift();
+          // 保存できなくても、撮影画像自体はダウンロードできるようにする
+          downloadCakePhoto(photo);
+          return;
+        }
+        renderCakeAlbum();
+        openAlbumBook();
+        document.getElementById('status').textContent = 'ケーキの写真をアルバムに保存しました。';
+      } catch (error) {
+        console.error(error);
+        alert('写真を作成できませんでした。ブラウザのコンソールでエラーを確認してください。');
+      }
+    });
+
+    document.getElementById('toggleAlbum').addEventListener('click', openAlbumBook);
+    document.getElementById('closeAlbumBook').addEventListener('click', closeAlbumBook);
+    albumBookOverlay.addEventListener('click', event => {
+      if (event.target === albumBookOverlay) closeAlbumBook();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && albumBookOverlay.classList.contains('open')) closeAlbumBook();
+    });
+
+    document.getElementById('clearAlbum').addEventListener('click', () => {
+      if (!cakeAlbum.length) return;
+      if (!confirm('アルバムの写真をすべて削除しますか？この操作は取り消せません。')) return;
+      cakeAlbum = [];
+      if (saveCakeAlbum()) renderCakeAlbum();
+    });
+
+    renderCakeAlbum();
+
+
+    function animate() {
+
+      requestAnimationFrame(animate);
+
+      controls.update();
+
+      renderer.render(scene, camera);
+
+    }
+
+    animate();
+
+  </script>
+
+</body>
+
+</html>
